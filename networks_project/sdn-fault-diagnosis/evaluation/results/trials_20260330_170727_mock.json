@@ -1,0 +1,141 @@
+[
+  {
+    "trial_id": "trial_1",
+    "timestamp": "2026-03-30T17:07:27.910933",
+    "injected_fault_type": "link_failure",
+    "injected_fault_location": "spine1:eth1",
+    "injected_fault_params": {},
+    "pre_fault_snapshot_id": "pre1",
+    "post_fault_snapshot_id": "post1",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "spine1:eth1",
+      "affected_routers": [
+        "spine1",
+        "leaf1"
+      ],
+      "affected_interfaces": [
+        "spine1:eth1"
+      ],
+      "affected_prefixes": [],
+      "confidence": 0.7,
+      "reasoning": "Neighbor down",
+      "remediation": "Bring interface up",
+      "diagnosis_time_ms": 45
+    },
+    "llm_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "spine1:eth1",
+      "affected_routers": [
+        "spine1",
+        "leaf1"
+      ],
+      "affected_interfaces": [
+        "spine1:eth1"
+      ],
+      "affected_prefixes": [],
+      "confidence": 0.9,
+      "reasoning": "LLM mock reasoning",
+      "remediation": "Bring interface up",
+      "diagnosis_time_ms": 200
+    },
+    "rule_based_correct_class": true,
+    "rule_based_correct_location": true,
+    "llm_correct_class": true,
+    "llm_correct_location": true
+  },
+  {
+    "trial_id": "trial_2",
+    "timestamp": "2026-03-30T17:07:27.910941",
+    "injected_fault_type": "missing_route",
+    "injected_fault_location": "leaf2:192.168.2.0/24",
+    "injected_fault_params": {},
+    "pre_fault_snapshot_id": "pre2",
+    "post_fault_snapshot_id": "post2",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "missing_route",
+      "location": "leaf2:192.168.2.0/24",
+      "affected_routers": [
+        "leaf2"
+      ],
+      "affected_interfaces": [],
+      "affected_prefixes": [
+        "192.168.2.0/24"
+      ],
+      "confidence": 0.8,
+      "reasoning": "Route withdrawn",
+      "remediation": "Restore network statement",
+      "diagnosis_time_ms": 50
+    },
+    "llm_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "missing_route",
+      "location": "leaf2:192.168.2.0/24",
+      "affected_routers": [
+        "leaf2"
+      ],
+      "affected_interfaces": [],
+      "affected_prefixes": [
+        "192.168.2.0/24"
+      ],
+      "confidence": 0.93,
+      "reasoning": "LLM mock reasoning",
+      "remediation": "Restore network statement",
+      "diagnosis_time_ms": 215
+    },
+    "rule_based_correct_class": true,
+    "rule_based_correct_location": true,
+    "llm_correct_class": true,
+    "llm_correct_location": true
+  },
+  {
+    "trial_id": "trial_3",
+    "timestamp": "2026-03-30T17:07:27.910946",
+    "injected_fault_type": "link_failure",
+    "injected_fault_location": "spine2:eth2",
+    "injected_fault_params": {},
+    "pre_fault_snapshot_id": "pre3",
+    "post_fault_snapshot_id": "post3",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "missing_route",
+      "location": "spine2:eth2",
+      "affected_routers": [
+        "spine2",
+        "leaf2"
+      ],
+      "affected_interfaces": [
+        "spine2:eth2"
+      ],
+      "affected_prefixes": [],
+      "confidence": 0.6,
+      "reasoning": "False positive",
+      "remediation": "Check interface",
+      "diagnosis_time_ms": 40
+    },
+    "llm_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "spine2:eth2",
+      "affected_routers": [
+        "spine2",
+        "leaf2"
+      ],
+      "affected_interfaces": [
+        "spine2:eth2"
+      ],
+      "affected_prefixes": [],
+      "confidence": 0.88,
+      "reasoning": "LLM mock reasoning",
+      "remediation": "Bring interface up",
+      "diagnosis_time_ms": 215
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": true,
+    "llm_correct_location": true
+  }
+]

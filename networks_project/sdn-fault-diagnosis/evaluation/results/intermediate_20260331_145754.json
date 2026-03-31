@@ -1,0 +1,174 @@
+{
+  "experiment_id": "20260331_145754",
+  "trials_completed": 20,
+  "metrics": {
+    "trial_count": 20,
+    "rule_based": {
+      "name": "rule-based",
+      "classification": {
+        "total": 20,
+        "correct": 1,
+        "incorrect": 19,
+        "accuracy": 0.05,
+        "true_positives": {
+          "stale_route": 1
+        },
+        "false_positives": {
+          "missing_route": 6,
+          "unknown": 5
+        },
+        "false_negatives": {
+          "link_failure": 5,
+          "flapping_link": 6,
+          "stale_route": 2,
+          "counter_anomaly": 3,
+          "missing_route": 3
+        }
+      },
+      "localization": {
+        "total": 20,
+        "correct": 1,
+        "partial": 1,
+        "incorrect": 18,
+        "accuracy": 0.05,
+        "partial_accuracy": 0.1
+      },
+      "time": {
+        "count": 20,
+        "mean_ms": 0.95,
+        "std_ms": 0.3840572873934304,
+        "median_ms": 1.0,
+        "p95_ms": 1.0500000000000007,
+        "p99_ms": 1.8099999999999987,
+        "min_ms": 0,
+        "max_ms": 2
+      }
+    },
+    "llm_agent": {
+      "name": "llm-agent",
+      "classification": {
+        "total": 20,
+        "correct": 5,
+        "incorrect": 15,
+        "accuracy": 0.25,
+        "true_positives": {
+          "link_failure": 5
+        },
+        "false_positives": {},
+        "false_negatives": {
+          "stale_route": 3,
+          "flapping_link": 6,
+          "counter_anomaly": 3,
+          "missing_route": 3
+        }
+      },
+      "localization": {
+        "total": 20,
+        "correct": 0,
+        "partial": 0,
+        "incorrect": 20,
+        "accuracy": 0.0,
+        "partial_accuracy": 0.0
+      },
+      "time": {
+        "count": 20,
+        "mean_ms": 0.0,
+        "std_ms": 0.0,
+        "median_ms": 0.0,
+        "p95_ms": 0.0,
+        "p99_ms": 0.0,
+        "min_ms": 0,
+        "max_ms": 0
+      }
+    },
+    "comparison": {
+      "classification_accuracy_diff": 0.2,
+      "localization_accuracy_diff": -0.05,
+      "mean_time_diff_ms": -0.95,
+      "hybrid_vs_rule_based_accuracy_diff": 0.0,
+      "hybrid_vs_llm_accuracy_diff": -0.2,
+      "hybrid_mean_time_ms": 0.3,
+      "ml_vs_rule_based_accuracy_diff": 0.2,
+      "ml_vs_llm_accuracy_diff": 0.0
+    },
+    "hybrid_engine": {
+      "name": "hybrid",
+      "classification": {
+        "total": 20,
+        "correct": 1,
+        "incorrect": 19,
+        "accuracy": 0.05,
+        "true_positives": {
+          "stale_route": 1
+        },
+        "false_positives": {
+          "missing_route": 6
+        },
+        "false_negatives": {
+          "link_failure": 5,
+          "flapping_link": 6,
+          "stale_route": 2,
+          "counter_anomaly": 3,
+          "missing_route": 3
+        }
+      },
+      "localization": {
+        "total": 20,
+        "correct": 1,
+        "partial": 1,
+        "incorrect": 18,
+        "accuracy": 0.05,
+        "partial_accuracy": 0.1
+      },
+      "time": {
+        "count": 20,
+        "mean_ms": 0.3,
+        "std_ms": 0.6403124237432849,
+        "median_ms": 0.0,
+        "p95_ms": 2.0,
+        "p99_ms": 2.0,
+        "min_ms": 0,
+        "max_ms": 2
+      }
+    },
+    "ml_engine": {
+      "name": "ml-random-forest",
+      "classification": {
+        "total": 20,
+        "correct": 5,
+        "incorrect": 15,
+        "accuracy": 0.25,
+        "true_positives": {
+          "link_failure": 5
+        },
+        "false_positives": {
+          "missing_route": 2
+        },
+        "false_negatives": {
+          "stale_route": 3,
+          "flapping_link": 6,
+          "counter_anomaly": 3,
+          "missing_route": 3
+        }
+      },
+      "localization": {
+        "total": 20,
+        "correct": 0,
+        "partial": 0,
+        "incorrect": 20,
+        "accuracy": 0.0,
+        "partial_accuracy": 0.0
+      },
+      "time": {
+        "count": 20,
+        "mean_ms": 20.45,
+        "std_ms": 14.671315551101749,
+        "median_ms": 16.0,
+        "p95_ms": 52.100000000000016,
+        "p99_ms": 68.81999999999996,
+        "min_ms": 9,
+        "max_ms": 73
+      }
+    }
+  }
+}

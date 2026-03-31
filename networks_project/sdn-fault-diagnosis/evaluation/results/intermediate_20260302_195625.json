@@ -1,0 +1,89 @@
+{
+  "experiment_id": "20260302_195625",
+  "trials_completed": 10,
+  "metrics": {
+    "trial_count": 10,
+    "rule_based": {
+      "name": "rule-based",
+      "classification": {
+        "total": 10,
+        "correct": 1,
+        "incorrect": 9,
+        "accuracy": 0.1,
+        "true_positives": {
+          "missing_route": 1
+        },
+        "false_positives": {
+          "unknown": 4,
+          "missing_route": 4
+        },
+        "false_negatives": {
+          "link_failure": 4,
+          "counter_anomaly": 1,
+          "stale_route": 2,
+          "flapping_link": 2
+        }
+      },
+      "localization": {
+        "total": 10,
+        "correct": 0,
+        "partial": 0,
+        "incorrect": 10,
+        "accuracy": 0.0,
+        "partial_accuracy": 0.0
+      },
+      "time": {
+        "count": 10,
+        "mean_ms": 2.8,
+        "std_ms": 1.077032961426901,
+        "median_ms": 3.0,
+        "p95_ms": 4.0,
+        "p99_ms": 4.0,
+        "min_ms": 0,
+        "max_ms": 4
+      }
+    },
+    "llm_agent": {
+      "name": "llm-agent",
+      "classification": {
+        "total": 10,
+        "correct": 4,
+        "incorrect": 6,
+        "accuracy": 0.4,
+        "true_positives": {
+          "link_failure": 4
+        },
+        "false_positives": {},
+        "false_negatives": {
+          "counter_anomaly": 1,
+          "stale_route": 2,
+          "flapping_link": 2,
+          "missing_route": 1
+        }
+      },
+      "localization": {
+        "total": 10,
+        "correct": 0,
+        "partial": 0,
+        "incorrect": 10,
+        "accuracy": 0.0,
+        "partial_accuracy": 0.0
+      },
+      "time": {
+        "count": 10,
+        "mean_ms": 0.0,
+        "std_ms": 0.0,
+        "median_ms": 0.0,
+        "p95_ms": 0.0,
+        "p99_ms": 0.0,
+        "min_ms": 0,
+        "max_ms": 0
+      }
+    },
+    "comparison": {
+      "classification_accuracy_diff": 0.30000000000000004,
+      "localization_accuracy_diff": 0.0,
+      "mean_time_diff_ms": -2.8
+    }
+  }
+}

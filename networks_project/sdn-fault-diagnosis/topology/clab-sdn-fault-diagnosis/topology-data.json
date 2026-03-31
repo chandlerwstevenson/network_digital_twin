@@ -1,0 +1,527 @@
+{
+  "name": "sdn-fault-diagnosis",
+  "type": "clab",
+  "clab": {
+    "config": {
+      "prefix": "clab",
+      "mgmt": {
+        "network": "clab",
+        "bridge": "br-f69c5c747769",
+        "ipv4-subnet": "172.20.20.0/24",
+        "ipv4-gw": "172.20.20.1",
+        "ipv6-subnet": "3fff:172:20:20::/64",
+        "ipv6-gw": "3fff:172:20:20::1",
+        "external-access": true
+      }
+    }
+  },
+  "ssh-pub-keys": ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA/tbh7JUbQU+z62QdWH4q08iYEWym1f5a0RDSoWwlRf","ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCZ/YcSJR71CdMwGcGM5bW0YWJUlwPJQP3Kgk9KGvELsxAYeTpZW6qqCs3DsS/5eipDMEaSy5J3d2Hdu6PXq/lEL6qplwDdcwRSnRa4iOrJy8Ob45G0r3dYlnWSolGimsIOjtsRJvNraste+VZBkwaoK5kt4N6gLhlB3D7xyQvHtd/cq1oAyDmkQ16/PddoMU3qETM/R9DTERt+rbw0k11ul/K3b/S7+zZJmOi1cZygyB67/K8wYHm18UD9h4Ty+alHODJ++uyeOHLkzyo2UrALE38EUcYSj2tUGrqPK1ZMiDpsEpdDD/WM7RR7OoLI5II485fbFP/KQXKThbRl+d0g67hoNybwsxMSBgDG0ENGA+IaLf8K955K93nqVcUcC0w9RQyAhy2Fq/Bg7fclYSPv/7rR6gVAywA7gsAWvfQ/df/kWq1h22/TGrvWD+EzkSEsNAvd/mZQ0H9mbBrzY1OHuKShIbVlRjbW75fbLoaZzLBnU2PRbBbL751HqDXJgeYtnX2lUZm9Uz2t5678ceIpxNPDxP+oTphQ+sNRuVnTVRT+BhOEdmfHuXuDCdkuQ96ySS8hlHhpKqPSV2IRJf5EK0vVpJljrGteWCAbRvz+Ko6h+kyYCwc7zMMT5yeAKev9jQIhD2kS0pCxGoVj0Lq+jEWjiwqh+B/u7hVHwc6imQ=="],
+  "nodes": {
+    "leaf1": {
+      "index": "0",
+      "shortname": "leaf1",
+      "longname": "clab-sdn-fault-diagnosis-leaf1",
+      "fqdn": "leaf1.sdn-fault-diagnosis.io",
+      "group": "",
+      "labdir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/leaf1",
+      "kind": "linux",
+      "image": "frrouting/frr:latest",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.5",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::5",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-f69c5c747769",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/leaf1",
+        "clab-node-longname": "clab-sdn-fault-diagnosis-leaf1",
+        "clab-node-name": "leaf1",
+        "clab-node-type": "",
+        "clab-owner": "chandlerstevenson",
+        "clab-topo-file": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/topology.yml",
+        "containerlab": "sdn-fault-diagnosis"
+      },
+      "port-bindings": [
+      ]
+    },
+    "leaf2": {
+      "index": "1",
+      "shortname": "leaf2",
+      "longname": "clab-sdn-fault-diagnosis-leaf2",
+      "fqdn": "leaf2.sdn-fault-diagnosis.io",
+      "group": "",
+      "labdir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/leaf2",
+      "kind": "linux",
+      "image": "frrouting/frr:latest",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.7",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::7",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-f69c5c747769",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/leaf2",
+        "clab-node-longname": "clab-sdn-fault-diagnosis-leaf2",
+        "clab-node-name": "leaf2",
+        "clab-node-type": "",
+        "clab-owner": "chandlerstevenson",
+        "clab-topo-file": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/topology.yml",
+        "containerlab": "sdn-fault-diagnosis"
+      },
+      "port-bindings": [
+      ]
+    },
+    "leaf3": {
+      "index": "2",
+      "shortname": "leaf3",
+      "longname": "clab-sdn-fault-diagnosis-leaf3",
+      "fqdn": "leaf3.sdn-fault-diagnosis.io",
+      "group": "",
+      "labdir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/leaf3",
+      "kind": "linux",
+      "image": "frrouting/frr:latest",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.4",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::4",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-f69c5c747769",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/leaf3",
+        "clab-node-longname": "clab-sdn-fault-diagnosis-leaf3",
+        "clab-node-name": "leaf3",
+        "clab-node-type": "",
+        "clab-owner": "chandlerstevenson",
+        "clab-topo-file": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/topology.yml",
+        "containerlab": "sdn-fault-diagnosis"
+      },
+      "port-bindings": [
+      ]
+    },
+    "leaf4": {
+      "index": "3",
+      "shortname": "leaf4",
+      "longname": "clab-sdn-fault-diagnosis-leaf4",
+      "fqdn": "leaf4.sdn-fault-diagnosis.io",
+      "group": "",
+      "labdir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/leaf4",
+      "kind": "linux",
+      "image": "frrouting/frr:latest",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.8",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::8",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-f69c5c747769",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/leaf4",
+        "clab-node-longname": "clab-sdn-fault-diagnosis-leaf4",
+        "clab-node-name": "leaf4",
+        "clab-node-type": "",
+        "clab-owner": "chandlerstevenson",
+        "clab-topo-file": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/topology.yml",
+        "containerlab": "sdn-fault-diagnosis"
+      },
+      "port-bindings": [
+      ]
+    },
+    "spine1": {
+      "index": "4",
+      "shortname": "spine1",
+      "longname": "clab-sdn-fault-diagnosis-spine1",
+      "fqdn": "spine1.sdn-fault-diagnosis.io",
+      "group": "",
+      "labdir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/spine1",
+      "kind": "linux",
+      "image": "frrouting/frr:latest",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.3",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::3",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-f69c5c747769",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/spine1",
+        "clab-node-longname": "clab-sdn-fault-diagnosis-spine1",
+        "clab-node-name": "spine1",
+        "clab-node-type": "",
+        "clab-owner": "chandlerstevenson",
+        "clab-topo-file": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/topology.yml",
+        "containerlab": "sdn-fault-diagnosis"
+      },
+      "port-bindings": [
+      ]
+    },
+    "spine2": {
+      "index": "5",
+      "shortname": "spine2",
+      "longname": "clab-sdn-fault-diagnosis-spine2",
+      "fqdn": "spine2.sdn-fault-diagnosis.io",
+      "group": "",
+      "labdir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/spine2",
+      "kind": "linux",
+      "image": "frrouting/frr:latest",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.2",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::2",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-f69c5c747769",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/spine2",
+        "clab-node-longname": "clab-sdn-fault-diagnosis-spine2",
+        "clab-node-name": "spine2",
+        "clab-node-type": "",
+        "clab-owner": "chandlerstevenson",
+        "clab-topo-file": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/topology.yml",
+        "containerlab": "sdn-fault-diagnosis"
+      },
+      "port-bindings": [
+      ]
+    },
+    "spine3": {
+      "index": "6",
+      "shortname": "spine3",
+      "longname": "clab-sdn-fault-diagnosis-spine3",
+      "fqdn": "spine3.sdn-fault-diagnosis.io",
+      "group": "",
+      "labdir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/spine3",
+      "kind": "linux",
+      "image": "frrouting/frr:latest",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.9",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::9",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-f69c5c747769",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/spine3",
+        "clab-node-longname": "clab-sdn-fault-diagnosis-spine3",
+        "clab-node-name": "spine3",
+        "clab-node-type": "",
+        "clab-owner": "chandlerstevenson",
+        "clab-topo-file": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/topology.yml",
+        "containerlab": "sdn-fault-diagnosis"
+      },
+      "port-bindings": [
+      ]
+    },
+    "spine4": {
+      "index": "7",
+      "shortname": "spine4",
+      "longname": "clab-sdn-fault-diagnosis-spine4",
+      "fqdn": "spine4.sdn-fault-diagnosis.io",
+      "group": "",
+      "labdir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/spine4",
+      "kind": "linux",
+      "image": "frrouting/frr:latest",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.6",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::6",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-f69c5c747769",
+        "clab-node-group": "",
+        "clab-node-kind": "linux",
+        "clab-node-lab-dir": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/clab-sdn-fault-diagnosis/spine4",
+        "clab-node-longname": "clab-sdn-fault-diagnosis-spine4",
+        "clab-node-name": "spine4",
+        "clab-node-type": "",
+        "clab-owner": "chandlerstevenson",
+        "clab-topo-file": "/Users/chandlerstevenson/downloads/official_optimesh/networks_project/sdn-fault-diagnosis/topology/topology.yml",
+        "containerlab": "sdn-fault-diagnosis"
+      },
+      "port-bindings": [
+      ]
+    }
+  },
+  "links": [
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine1",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:1c:76:dc",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf1",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:af:c0:60",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine1",
+          "interface": "eth2",
+          "mac": "aa:c1:ab:c5:8c:47",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf2",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:35:a0:a1",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine1",
+          "interface": "eth3",
+          "mac": "aa:c1:ab:65:77:96",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf3",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:2e:1e:d1",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine1",
+          "interface": "eth4",
+          "mac": "aa:c1:ab:90:41:66",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf4",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:31:0f:6b",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine2",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:e5:9f:79",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf1",
+          "interface": "eth2",
+          "mac": "aa:c1:ab:e3:ce:14",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine2",
+          "interface": "eth2",
+          "mac": "aa:c1:ab:eb:80:f0",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf2",
+          "interface": "eth2",
+          "mac": "aa:c1:ab:7f:b8:dd",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine2",
+          "interface": "eth3",
+          "mac": "aa:c1:ab:d4:85:bb",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf3",
+          "interface": "eth2",
+          "mac": "aa:c1:ab:19:ba:4f",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine2",
+          "interface": "eth4",
+          "mac": "aa:c1:ab:43:47:80",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf4",
+          "interface": "eth2",
+          "mac": "aa:c1:ab:5a:04:b8",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine3",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:87:18:14",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf1",
+          "interface": "eth3",
+          "mac": "aa:c1:ab:77:29:68",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine3",
+          "interface": "eth2",
+          "mac": "aa:c1:ab:d6:1a:ba",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf2",
+          "interface": "eth3",
+          "mac": "aa:c1:ab:ea:4b:0d",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine3",
+          "interface": "eth3",
+          "mac": "aa:c1:ab:50:72:12",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf3",
+          "interface": "eth3",
+          "mac": "aa:c1:ab:e4:fe:ae",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine3",
+          "interface": "eth4",
+          "mac": "aa:c1:ab:db:10:e2",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf4",
+          "interface": "eth3",
+          "mac": "aa:c1:ab:5c:55:2b",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine4",
+          "interface": "eth1",
+          "mac": "aa:c1:ab:97:5e:2d",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf1",
+          "interface": "eth4",
+          "mac": "aa:c1:ab:62:56:34",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine4",
+          "interface": "eth2",
+          "mac": "aa:c1:ab:8b:a6:90",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf2",
+          "interface": "eth4",
+          "mac": "aa:c1:ab:4e:0d:c2",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine4",
+          "interface": "eth3",
+          "mac": "aa:c1:ab:04:0d:68",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf3",
+          "interface": "eth4",
+          "mac": "aa:c1:ab:5c:0f:df",
+          "peer": "a"
+        }
+      }
+    },
+    {
+      "endpoints": {
+        "a": {
+          "node": "spine4",
+          "interface": "eth4",
+          "mac": "aa:c1:ab:69:13:57",
+          "peer": "z"
+        },
+        "z": {
+          "node": "leaf4",
+          "interface": "eth4",
+          "mac": "aa:c1:ab:6a:3e:b6",
+          "peer": "a"
+        }
+      }
+    }
+  ]
+}

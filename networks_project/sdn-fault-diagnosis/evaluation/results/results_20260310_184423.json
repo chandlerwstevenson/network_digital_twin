@@ -1,0 +1,210 @@
+{
+  "experiment_id": "20260310_184423",
+  "num_trials": 50,
+  "elapsed_seconds": 2717.424339056015,
+  "metrics": {
+    "trial_count": 50,
+    "rule_based": {
+      "name": "rule-based",
+      "classification": {
+        "total": 50,
+        "correct": 2,
+        "incorrect": 48,
+        "accuracy": 0.04,
+        "true_positives": {
+          "missing_route": 2
+        },
+        "false_positives": {
+          "unknown": 9,
+          "missing_route": 15
+        },
+        "false_negatives": {
+          "missing_route": 7,
+          "link_failure": 11,
+          "counter_anomaly": 8,
+          "flapping_link": 14,
+          "stale_route": 8
+        }
+      },
+      "localization": {
+        "total": 50,
+        "correct": 0,
+        "partial": 3,
+        "incorrect": 47,
+        "accuracy": 0.0,
+        "partial_accuracy": 0.06
+      },
+      "time": {
+        "count": 50,
+        "mean_ms": 0.68,
+        "std_ms": 0.466476151587624,
+        "median_ms": 1.0,
+        "p95_ms": 1.0,
+        "p99_ms": 1.0,
+        "min_ms": 0,
+        "max_ms": 1
+      }
+    },
+    "llm_agent": {
+      "name": "llm-agent",
+      "classification": {
+        "total": 50,
+        "correct": 19,
+        "incorrect": 31,
+        "accuracy": 0.38,
+        "true_positives": {
+          "link_failure": 11,
+          "stale_route": 8
+        },
+        "false_positives": {
+          "link_failure": 1
+        },
+        "false_negatives": {
+          "missing_route": 9,
+          "counter_anomaly": 8,
+          "flapping_link": 14
+        }
+      },
+      "localization": {
+        "total": 50,
+        "correct": 12,
+        "partial": 0,
+        "incorrect": 38,
+        "accuracy": 0.24,
+        "partial_accuracy": 0.24
+      },
+      "time": {
+        "count": 50,
+        "mean_ms": 13983.94,
+        "std_ms": 1645.3239366155226,
+        "median_ms": 13597.5,
+        "p95_ms": 17028.049999999996,
+        "p99_ms": 17967.66,
+        "min_ms": 10679,
+        "max_ms": 18245
+      }
+    },
+    "comparison": {
+      "classification_accuracy_diff": 0.34,
+      "localization_accuracy_diff": 0.24,
+      "mean_time_diff_ms": 13983.26
+    }
+  },
+  "per_class": {
+    "flapping_link": {
+      "count": 14,
+      "rule_based": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "llm": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "link_failure": {
+      "count": 11,
+      "rule_based": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "llm": {
+        "correct": 11,
+        "precision": 0.9166666666666666,
+        "recall": 1.0,
+        "f1": 0.9565217391304348
+      }
+    },
+    "missing_route": {
+      "count": 9,
+      "rule_based": {
+        "correct": 2,
+        "precision": 0.11764705882352941,
+        "recall": 0.2222222222222222,
+        "f1": 0.15384615384615383
+      },
+      "llm": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "counter_anomaly": {
+      "count": 8,
+      "rule_based": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "llm": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "stale_route": {
+      "count": 8,
+      "rule_based": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "llm": {
+        "correct": 8,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    }
+  },
+  "statistical_tests": {
+    "mcnemar_classification": {
+      "test_name": "McNemar's Test",
+      "statistic": 12.19047619047619,
+      "p_value": 0.00048034119998185965,
+      "significant": "True",
+      "effect_size": 9.5,
+      "confidence_interval": null,
+      "interpretation": "LLM significantly outperforms rule-based (p=0.0005)"
+    },
+    "wilcoxon_time": {
+      "test_name": "Wilcoxon Signed-Rank Test",
+      "statistic": 0.0,
+      "p_value": 1.7763568394002505e-15,
+      "significant": "True",
+      "effect_size": 1.0,
+      "confidence_interval": null,
+      "interpretation": "LLM significantly slower than rule-based (median diff: 13596ms, p=0.0000)"
+    },
+    "bootstrap_ci": {
+      "llm_accuracy_95ci": [
+        0.24,
+        0.52
+      ],
+      "rule_based_accuracy_95ci": [
+        0.0,
+        0.1
+      ],
+      "accuracy_difference_95ci": [
+        0.18,
+        0.5
+      ]
+    },
+    "summary": {
+      "n_trials": 50,
+      "llm_accuracy": 0.38,
+      "rule_based_accuracy": 0.04,
+      "accuracy_difference": 0.34
+    }
+  }
+}

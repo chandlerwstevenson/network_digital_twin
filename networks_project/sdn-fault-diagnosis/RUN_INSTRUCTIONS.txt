@@ -1,0 +1,129 @@
+How to Run the SDN Fault Diagnosis Project
+==========================================
+
+QUICK START (no lab needed — mock data)
+---------------------------------------
+cd sdn-fault-diagnosis/
+
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Train the ML model (takes ~10 seconds)
+python -m diagnosis.ml_training
+
+# 3. Generate mock experiment results (no lab or API key needed)
+python scripts/generate_mock_results.py
+
+# 4. Launch the dashboard
+python dashboard.py
+# Open http://127.0.0.1:8050
+
+# 5. Run all tests (145 tests, ~3 minutes)
+pytest tests/ -v
+
+
+RUNNING WITH THE LIVE LAB
+--------------------------
+Prerequisites:
+- Python 3.10+
+- OrbStack (macOS) with Docker
+- (Optional) ANTHROPIC_API_KEY for real LLM runs
+
+# 1. Setup
+pip install -r requirements.txt
+export ANTHROPIC_API_KEY=sk-ant-...   # skip if using --mock-llm
+
+# 2. Train the ML model
+python -m diagnosis.ml_training
+
+# 3. Deploy the network (creates OrbStack VM + Containerlab topology)
+./scripts/deploy.sh
+sleep 30
+./scripts/verify_health.sh
+
+# 4. Run experiment — all 4 engines (rule-based, LLM, ML, hybrid)
+python -m evaluation.runner --trials 20 --mock-llm --ml-engine
+
+# With real LLM (costs money):
+python -m evaluation.runner --trials 20 --ml-engine
+
+# With a specific model:
+python -m evaluation.runner --trials 20 --ml-engine --model claude-haiku-4-5-20251001
+
+# 5. View results
+python dashboard.py
+
+# 6. Tear down
+./scripts/destroy.sh
+
+
+CONFIG PIPELINE (no lab needed)
+-------------------------------
+# Run all 6 config-error scenarios through validation + mock fix:
+pytest tests/test_config_pipeline.py -v
+
+# Run a single scenario manually:
+python -m config.runner \
+  --config tests/fixtures/config_errors/missing_network/broken.conf \
+  --intent tests/fixtures/config_errors/missing_network/intent.json \
+  --planner mock \
+  --fixed tests/fixtures/config_errors/missing_network/fixed.conf
+
+# Available scenarios:
+#   ospf_area_mismatch   — wrong area ID on network statement
+#   missing_network      — host subnet not advertised
+#   missing_router_id    — no explicit router-id
+#   duplicate_router_id  — router-id conflicts with another router
+#   interface_typo       — interface name misspelled
+#   missing_auth         — OSPF authentication missing
+
+# Use real LLM to generate fixes (requires API key):
+python -m config.runner \
+  --config tests/fixtures/config_errors/missing_network/broken.conf \
+  --intent tests/fixtures/config_errors/missing_network/intent.json \
+  --planner llm
+
+
+TESTS
+-----
+# All tests (145 total, ~3 min due to ML training in test fixtures)
+pytest tests/ -v
+
+# Fast tests only (119 tests, ~5 sec)
+pytest tests/ --ignore=tests/test_ml_engine.py -v
+
+# Specific test modules:
+pytest tests/test_rule_based.py -v       # Rule-based engine (11 tests)
+pytest tests/test_llm_agent.py -v        # LLM agent (19 tests)
+pytest tests/test_ml_engine.py -v        # ML engine (26 tests)
+pytest tests/test_hybrid_engine.py -v    # Hybrid engine (10 tests)
+pytest tests/test_stats.py -v            # Statistics & cost (21 tests)
+pytest tests/test_config_pipeline.py -v  # Config pipeline (22 tests)
+pytest tests/test_collector.py -v        # Telemetry (14 tests)
+pytest tests/test_injector.py -v         # Fault injection (16 tests)
+
+
+WHAT THE DASHBOARD SHOWS
+-------------------------
+- 4-engine accuracy comparison with 95% CI
+- Cost-per-correct-diagnosis chart (LLM vs hybrid vs free engines)
+- Pairwise statistical tests (McNemar p-values + Cohen's h effect sizes)
+- Hybrid engine panel (defer rate, cost savings vs always-LLM)
+- Per-fault-class F1 breakdown
+- Timing latency chart (mean/median/P95)
+- Full trial table with all engines
+
+
+TROUBLESHOOTING
+---------------
+- deploy.sh fails with "containers already exist":
+    ./scripts/deploy.sh --reconfigure
+
+- Health check fails:
+    Wait 30s more, then re-run ./scripts/verify_health.sh
+
+- No results in dashboard:
+    Run: python scripts/generate_mock_results.py
+
+- ML engine not found:
+    Run: python -m diagnosis.ml_training

@@ -1,0 +1,12 @@
+{
+  "router_id": "10.0.1.2",
+  "description": "Leaf2 must advertise host subnet 192.168.2.0/24 and loopback in area 0",
+  "networks": [
+    {"prefix": "10.0.1.2/32", "area": "0"},
+    {"prefix": "192.168.2.0/24", "area": "0"}
+  ],
+  "interfaces": {
+    "eth1": {"area": "0"},
+    "eth2": {"area": "0"}
+  }
+}

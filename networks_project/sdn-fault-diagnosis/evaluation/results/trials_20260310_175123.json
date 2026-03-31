@@ -1,0 +1,103 @@
+[
+  {
+    "trial_id": "trial_20260310_175127_38dcdd61",
+    "timestamp": "2026-03-10 17:51:59.301330",
+    "injected_fault_type": "link_failure",
+    "injected_fault_location": "spine2:eth2",
+    "injected_fault_params": {
+      "fault_class": "link_failure",
+      "scenario": "spine2_leaf2_link_down",
+      "compound": false,
+      "location": "spine2:eth2"
+    },
+    "pre_fault_snapshot_id": "20260310_175127_544214",
+    "post_fault_snapshot_id": "20260310_175143_721169",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "unknown",
+      "location": "leaf2",
+      "affected_routers": [
+        "leaf2",
+        "spine4",
+        "spine3",
+        "spine1",
+        "spine2"
+      ],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 0.5,
+      "reasoning": "Anomalies detected but fault type unclear",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "leaf2:eth2",
+      "affected_routers": [
+        "leaf2"
+      ],
+      "affected_interfaces": [
+        "leaf2:eth2"
+      ],
+      "affected_prefixes": [],
+      "confidence": 0.9,
+      "reasoning": "[MOCK] Interface is down",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": true,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260310_175159_cd212396",
+    "timestamp": "2026-03-10 17:53:05.325309",
+    "injected_fault_type": "flapping_link",
+    "injected_fault_location": "spine1:eth2",
+    "injected_fault_params": {
+      "fault_class": "flapping_link",
+      "scenario": "spine1_leaf2_flapping",
+      "compound": false,
+      "location": "spine1:eth2"
+    },
+    "pre_fault_snapshot_id": "20260310_175159_302070",
+    "post_fault_snapshot_id": "20260310_175249_577667",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "unknown",
+      "location": "spine2",
+      "affected_routers": [
+        "spine2",
+        "leaf2"
+      ],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 0.5,
+      "reasoning": "Anomalies detected but fault type unclear",
+      "remediation": null,
+      "diagnosis_time_ms": 1,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "[MOCK] No faults detected",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": false,
+    "llm_correct_location": false
+  }
+]

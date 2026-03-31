@@ -1,0 +1,136 @@
+{
+  "experiment_id": "20260302_055147",
+  "num_trials": 1,
+  "elapsed_seconds": 31.962467193603516,
+  "metrics": {
+    "trial_count": 1,
+    "rule_based": {
+      "name": "rule-based",
+      "classification": {
+        "total": 1,
+        "correct": 0,
+        "incorrect": 1,
+        "accuracy": 0.0,
+        "true_positives": {},
+        "false_positives": {
+          "unknown": 1
+        },
+        "false_negatives": {
+          "link_failure": 1
+        }
+      },
+      "localization": {
+        "total": 1,
+        "correct": 0,
+        "partial": 0,
+        "incorrect": 1,
+        "accuracy": 0.0,
+        "partial_accuracy": 0.0
+      },
+      "time": {
+        "count": 1,
+        "mean_ms": 0.0,
+        "std_ms": 0.0,
+        "median_ms": 0.0,
+        "p95_ms": 0.0,
+        "p99_ms": 0.0,
+        "min_ms": 0,
+        "max_ms": 0
+      }
+    },
+    "llm_agent": {
+      "name": "llm-agent",
+      "classification": {
+        "total": 1,
+        "correct": 1,
+        "incorrect": 0,
+        "accuracy": 1.0,
+        "true_positives": {
+          "link_failure": 1
+        },
+        "false_positives": {},
+        "false_negatives": {}
+      },
+      "localization": {
+        "total": 1,
+        "correct": 0,
+        "partial": 0,
+        "incorrect": 1,
+        "accuracy": 0.0,
+        "partial_accuracy": 0.0
+      },
+      "time": {
+        "count": 1,
+        "mean_ms": 0.0,
+        "std_ms": 0.0,
+        "median_ms": 0.0,
+        "p95_ms": 0.0,
+        "p99_ms": 0.0,
+        "min_ms": 0,
+        "max_ms": 0
+      }
+    },
+    "comparison": {
+      "classification_accuracy_diff": 1.0,
+      "localization_accuracy_diff": 0.0,
+      "mean_time_diff_ms": 0.0
+    }
+  },
+  "per_class": {
+    "link_failure": {
+      "count": 1,
+      "rule_based": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "llm": {
+        "correct": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    }
+  },
+  "statistical_tests": {
+    "mcnemar_classification": {
+      "test_name": "McNemar's Test",
+      "statistic": 0.0,
+      "p_value": 1.0,
+      "significant": "False",
+      "effect_size": Infinity,
+      "confidence_interval": null,
+      "interpretation": "No significant difference in accuracy (p=1.0000)"
+    },
+    "wilcoxon_time": {
+      "test_name": "Wilcoxon Signed-Rank Test",
+      "statistic": 0.0,
+      "p_value": 1.0,
+      "significant": false,
+      "effect_size": null,
+      "confidence_interval": null,
+      "interpretation": "No time differences between engines"
+    },
+    "bootstrap_ci": {
+      "llm_accuracy_95ci": [
+        1.0,
+        1.0
+      ],
+      "rule_based_accuracy_95ci": [
+        0.0,
+        0.0
+      ],
+      "accuracy_difference_95ci": [
+        1.0,
+        1.0
+      ]
+    },
+    "summary": {
+      "n_trials": 1,
+      "llm_accuracy": 1.0,
+      "rule_based_accuracy": 0.0,
+      "accuracy_difference": 1.0
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "router_id": "10.0.0.1",
+  "description": "Leaf1 should advertise host subnet in area 0",
+  "networks": [
+    {
+      "prefix": "192.168.1.0/24",
+      "area": "0",
+      "auth_required": false
+    }
+  ],
+  "interfaces": {
+    "eth1": {
+      "auth_required": true,
+      "area": "0"
+    }
+  }
+}

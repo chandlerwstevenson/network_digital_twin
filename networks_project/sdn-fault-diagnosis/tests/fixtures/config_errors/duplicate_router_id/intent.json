@@ -1,0 +1,11 @@
+{
+  "router_id": "10.0.1.4",
+  "description": "Leaf4 has router-id 10.0.0.1 which conflicts with spine1. Should be 10.0.1.4",
+  "networks": [
+    {"prefix": "10.0.1.4/32", "area": "0"},
+    {"prefix": "192.168.4.0/24", "area": "0"}
+  ],
+  "interfaces": {
+    "eth1": {"area": "0"}
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "experiment_id": "20260302_195625",
+  "num_trials": 10,
+  "elapsed_seconds": 409.61002802848816,
+  "metrics": {
+    "trial_count": 10,
+    "rule_based": {
+      "name": "rule-based",
+      "classification": {
+        "total": 10,
+        "correct": 1,
+        "incorrect": 9,
+        "accuracy": 0.1,
+        "true_positives": {
+          "missing_route": 1
+        },
+        "false_positives": {
+          "unknown": 4,
+          "missing_route": 4
+        },
+        "false_negatives": {
+          "link_failure": 4,
+          "counter_anomaly": 1,
+          "stale_route": 2,
+          "flapping_link": 2
+        }
+      },
+      "localization": {
+        "total": 10,
+        "correct": 0,
+        "partial": 0,
+        "incorrect": 10,
+        "accuracy": 0.0,
+        "partial_accuracy": 0.0
+      },
+      "time": {
+        "count": 10,
+        "mean_ms": 2.8,
+        "std_ms": 1.077032961426901,
+        "median_ms": 3.0,
+        "p95_ms": 4.0,
+        "p99_ms": 4.0,
+        "min_ms": 0,
+        "max_ms": 4
+      }
+    },
+    "llm_agent": {
+      "name": "llm-agent",
+      "classification": {
+        "total": 10,
+        "correct": 4,
+        "incorrect": 6,
+        "accuracy": 0.4,
+        "true_positives": {
+          "link_failure": 4
+        },
+        "false_positives": {},
+        "false_negatives": {
+          "counter_anomaly": 1,
+          "stale_route": 2,
+          "flapping_link": 2,
+          "missing_route": 1
+        }
+      },
+      "localization": {
+        "total": 10,
+        "correct": 0,
+        "partial": 0,
+        "incorrect": 10,
+        "accuracy": 0.0,
+        "partial_accuracy": 0.0
+      },
+      "time": {
+        "count": 10,
+        "mean_ms": 0.0,
+        "std_ms": 0.0,
+        "median_ms": 0.0,
+        "p95_ms": 0.0,
+        "p99_ms": 0.0,
+        "min_ms": 0,
+        "max_ms": 0
+      }
+    },
+    "comparison": {
+      "classification_accuracy_diff": 0.30000000000000004,
+      "localization_accuracy_diff": 0.0,
+      "mean_time_diff_ms": -2.8
+    }
+  },
+  "per_class": {
+    "flapping_link": {
+      "count": 2,
+      "rule_based": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "llm": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "counter_anomaly": {
+      "count": 1,
+      "rule_based": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "llm": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "missing_route": {
+      "count": 1,
+      "rule_based": {
+        "correct": 1,
+        "precision": 0.2,
+        "recall": 1.0,
+        "f1": 0.33333333333333337
+      },
+      "llm": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "stale_route": {
+      "count": 2,
+      "rule_based": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "llm": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "link_failure": {
+      "count": 4,
+      "rule_based": {
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "llm": {
+        "correct": 4,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    }
+  },
+  "statistical_tests": {
+    "mcnemar_classification": {
+      "test_name": "McNemar's Test",
+      "statistic": 0.8,
+      "p_value": 0.37109336952269756,
+      "significant": "False",
+      "effect_size": 4.0,
+      "confidence_interval": null,
+      "interpretation": "No significant difference in accuracy (p=0.3711)"
+    },
+    "wilcoxon_time": {
+      "test_name": "Wilcoxon Signed-Rank Test",
+      "statistic": 0.0,
+      "p_value": 0.00390625,
+      "significant": "True",
+      "effect_size": 1.0,
+      "confidence_interval": null,
+      "interpretation": "LLM significantly faster than rule-based (median diff: -3ms, p=0.0039)"
+    },
+    "bootstrap_ci": {
+      "llm_accuracy_95ci": [
+        0.1,
+        0.7
+      ],
+      "rule_based_accuracy_95ci": [
+        0.0,
+        0.3
+      ],
+      "accuracy_difference_95ci": [
+        -0.1,
+        0.7
+      ]
+    },
+    "summary": {
+      "n_trials": 10,
+      "llm_accuracy": 0.4,
+      "rule_based_accuracy": 0.1,
+      "accuracy_difference": 0.30000000000000004
+    }
+  }
+}

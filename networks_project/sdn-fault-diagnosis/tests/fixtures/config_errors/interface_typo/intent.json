@@ -1,0 +1,11 @@
+{
+  "router_id": "10.0.0.2",
+  "description": "Spine2 has 'et2' instead of 'eth2' — interface name typo",
+  "networks": [
+    {"prefix": "10.0.0.2/32", "area": "0"}
+  ],
+  "interfaces": {
+    "eth1": {"area": "0"},
+    "eth2": {"area": "0"}
+  }
+}

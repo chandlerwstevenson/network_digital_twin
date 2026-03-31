@@ -1,0 +1,25 @@
+all:
+  vars:
+    # The generated inventory is assumed to be used from the clab host.
+    # Hence no http proxy should be used. Therefore we make sure the http
+    # module does not attempt using any global http proxy.
+    ansible_httpapi_use_proxy: false
+  children:
+    linux:
+      hosts:
+        clab-sdn-fault-diagnosis-leaf1:
+          ansible_host: 172.20.20.5
+        clab-sdn-fault-diagnosis-leaf2:
+          ansible_host: 172.20.20.7
+        clab-sdn-fault-diagnosis-leaf3:
+          ansible_host: 172.20.20.4
+        clab-sdn-fault-diagnosis-leaf4:
+          ansible_host: 172.20.20.8
+        clab-sdn-fault-diagnosis-spine1:
+          ansible_host: 172.20.20.3
+        clab-sdn-fault-diagnosis-spine2:
+          ansible_host: 172.20.20.2
+        clab-sdn-fault-diagnosis-spine3:
+          ansible_host: 172.20.20.9
+        clab-sdn-fault-diagnosis-spine4:
+          ansible_host: 172.20.20.6

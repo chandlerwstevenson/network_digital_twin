@@ -1,0 +1,55 @@
+[
+  {
+    "trial_id": "trial_20260302_055151_03423965",
+    "timestamp": "2026-03-02 05:52:23.324603",
+    "injected_fault_type": "link_failure",
+    "injected_fault_location": "leaf3:eth4",
+    "injected_fault_params": {
+      "fault_class": "link_failure",
+      "scenario": "leaf3_spine4_link_down",
+      "compound": false,
+      "location": "leaf3:eth4"
+    },
+    "pre_fault_snapshot_id": "20260302_055151_363280",
+    "post_fault_snapshot_id": "20260302_055207_673101",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "unknown",
+      "location": "spine1",
+      "affected_routers": [
+        "spine1",
+        "spine3",
+        "spine4",
+        "spine2"
+      ],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 0.5,
+      "reasoning": "Anomalies detected but fault type unclear",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "spine4:eth3",
+      "affected_routers": [
+        "spine4"
+      ],
+      "affected_interfaces": [
+        "spine4:eth3"
+      ],
+      "affected_prefixes": [],
+      "confidence": 0.9,
+      "reasoning": "[MOCK] Interface is down",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": true,
+    "llm_correct_location": false
+  }
+]

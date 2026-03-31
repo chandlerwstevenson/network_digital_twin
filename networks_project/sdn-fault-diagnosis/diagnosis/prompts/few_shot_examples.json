@@ -1,0 +1,437 @@
+[
+  {
+    "description": "Link failure between spine1 and leaf1",
+    "input": {
+      "snapshot_id": "example_001",
+      "routers": {
+        "spine1": {
+          "router_name": "spine1",
+          "router_id": "10.0.0.1",
+          "neighbors": [
+            {"neighbor_id": "10.0.1.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.1.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.1.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "down", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth2": {"name": "eth2", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth3": {"name": "eth3", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth4": {"name": "eth4", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.0.1", "link_count": 4, "advertising_router": "10.0.0.1", "sequence_number": "0x80000006"}
+            ]
+          }
+        },
+        "leaf1": {
+          "router_name": "leaf1",
+          "router_id": "10.0.1.1",
+          "neighbors": [
+            {"neighbor_id": "10.0.0.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.0.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.0.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "down", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.1.1", "link_count": 5, "advertising_router": "10.0.1.1", "sequence_number": "0x80000006"}
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "spine1:eth1",
+      "affected_routers": ["spine1", "leaf1"],
+      "affected_interfaces": ["spine1:eth1", "leaf1:eth1"],
+      "affected_prefixes": [],
+      "confidence": 0.95,
+      "reasoning": "Step 1: Analyzed spine1 neighbors - missing neighbor 10.0.1.1 (leaf1) which should be on eth1. Step 2: Checked spine1 interfaces - eth1 is DOWN. Step 3: Verified on leaf1 - also missing neighbor 10.0.0.1 (spine1) and eth1 is DOWN. Step 4: The symmetric failure on both ends confirms a link failure. Step 5: Confidence is high because interface down status + neighbor loss on both sides is definitive.",
+      "remediation": "Bring interface eth1 back up on spine1: 'ip link set eth1 up'. If physical issue, check cable/transceiver."
+    }
+  },
+  {
+    "description": "Stale route injection on leaf2",
+    "input": {
+      "snapshot_id": "example_002",
+      "routers": {
+        "leaf2": {
+          "router_name": "leaf2",
+          "router_id": "10.0.1.2",
+          "neighbors": [
+            {"neighbor_id": "10.0.0.1", "state": "Full", "interface": "eth1"},
+            {"neighbor_id": "10.0.0.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.0.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.0.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth2": {"name": "eth2", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth3": {"name": "eth3", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth4": {"name": "eth4", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "routing_table": {
+            "routes": {
+              "192.168.4.0/24": [{"prefix": "192.168.4.0", "prefix_len": 24, "protocol": "static", "distance": 1, "nexthops": [{"ip": "10.1.1.2", "interface": "eth1"}]}],
+              "192.168.3.0/24": [{"prefix": "192.168.3.0", "prefix_len": 24, "protocol": "ospf", "distance": 110, "nexthops": [{"ip": "10.1.1.0", "interface": "eth1"}]}]
+            }
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.1.2", "link_count": 6, "advertising_router": "10.0.1.2"},
+              {"lsa_id": "10.0.1.4", "link_count": 6, "advertising_router": "10.0.1.4"}
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "fault_detected": true,
+      "fault_class": "stale_route",
+      "location": "leaf2:192.168.4.0/24",
+      "affected_routers": ["leaf2"],
+      "affected_interfaces": [],
+      "affected_prefixes": ["192.168.4.0/24"],
+      "confidence": 0.90,
+      "reasoning": "Step 1: All adjacencies are Full, so no link failure. Step 2: Checked routing tables - leaf2 has a STATIC route for 192.168.4.0/24 with admin distance 1. Step 3: This is leaf4's host subnet, which should be learned via OSPF (distance 110). The static route with distance 1 overrides OSPF. Step 4: No other anomalies. This is a stale route.",
+      "remediation": "Remove the stale static route on leaf2: vtysh -c 'configure terminal' -c 'no ip route 192.168.4.0/24 10.1.1.2 1'"
+    }
+  },
+  {
+    "description": "Flapping link between spine2 and leaf3",
+    "input": {
+      "snapshot_id": "example_003",
+      "routers": {
+        "spine2": {
+          "router_name": "spine2",
+          "router_id": "10.0.0.2",
+          "neighbors": [
+            {"neighbor_id": "10.0.1.1", "state": "Full", "interface": "eth1"},
+            {"neighbor_id": "10.0.1.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.1.3", "state": "Init", "interface": "eth3", "retransmit_counter": 7},
+            {"neighbor_id": "10.0.1.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth2": {"name": "eth2", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth3": {"name": "eth3", "link_status": "up", "counters": {"error_rate": 0.3, "drop_rate": 0.1}},
+            "eth4": {"name": "eth4", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.0.2", "link_count": 5, "advertising_router": "10.0.0.2", "sequence_number": "0x8000000c"},
+              {"lsa_id": "10.0.1.3", "link_count": 5, "advertising_router": "10.0.1.3", "sequence_number": "0x8000000b"}
+            ]
+          }
+        },
+        "leaf3": {
+          "router_name": "leaf3",
+          "router_id": "10.0.1.3",
+          "neighbors": [
+            {"neighbor_id": "10.0.0.1", "state": "Full", "interface": "eth1"},
+            {"neighbor_id": "10.0.0.2", "state": "ExStart", "interface": "eth2", "retransmit_counter": 5},
+            {"neighbor_id": "10.0.0.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.0.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth2": {"name": "eth2", "link_status": "up", "counters": {"error_rate": 0.2, "drop_rate": 0.1}}
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.1.3", "link_count": 5, "advertising_router": "10.0.1.3", "sequence_number": "0x8000000b"}
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "fault_detected": true,
+      "fault_class": "flapping_link",
+      "location": "spine2:eth3",
+      "affected_routers": ["spine2", "leaf3"],
+      "affected_interfaces": ["spine2:eth3", "leaf3:eth2"],
+      "affected_prefixes": [],
+      "confidence": 0.85,
+      "reasoning": "Step 1: spine2 shows neighbor 10.0.1.3 (leaf3) in 'Init' state on eth3, with retransmit_counter=7 indicating repeated attempts. Step 2: leaf3 shows neighbor 10.0.0.2 (spine2) in 'ExStart' state on eth2, also with high retransmit_counter=5. Step 3: Crucially, both interfaces are UP - this rules out a clean link failure. Step 4: LSA sequence numbers are unusually high (0x8000000b/0c), suggesting repeated LSA regeneration from state oscillation. Step 5: Minor error rates on the affected interfaces (0.2-0.3%) are consistent with intermittent connectivity. This is a flapping link, not a link failure.",
+      "remediation": "Investigate instability on spine2:eth3 <-> leaf3:eth2: check cables, transceivers, and consider dampening OSPF timers."
+    }
+  },
+  {
+    "description": "Missing route - leaf3 host subnet withdrawn",
+    "input": {
+      "snapshot_id": "example_004",
+      "routers": {
+        "spine1": {
+          "router_name": "spine1",
+          "router_id": "10.0.0.1",
+          "neighbors": [
+            {"neighbor_id": "10.0.1.1", "state": "Full", "interface": "eth1"},
+            {"neighbor_id": "10.0.1.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.1.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.1.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth3": {"name": "eth3", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "routing_table": {
+            "routes": {
+              "192.168.1.0/24": [{"prefix": "192.168.1.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}],
+              "192.168.2.0/24": [{"prefix": "192.168.2.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}],
+              "192.168.4.0/24": [{"prefix": "192.168.4.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}]
+            }
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.0.1", "link_count": 5, "advertising_router": "10.0.0.1"},
+              {"lsa_id": "10.0.1.3", "link_count": 4, "advertising_router": "10.0.1.3"}
+            ]
+          }
+        },
+        "leaf3": {
+          "router_name": "leaf3",
+          "router_id": "10.0.1.3",
+          "neighbors": [
+            {"neighbor_id": "10.0.0.1", "state": "Full", "interface": "eth1"},
+            {"neighbor_id": "10.0.0.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.0.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.0.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.1.3", "link_count": 4, "advertising_router": "10.0.1.3"}
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "fault_detected": true,
+      "fault_class": "missing_route",
+      "location": "leaf3:192.168.3.0/24",
+      "affected_routers": ["spine1", "leaf3"],
+      "affected_interfaces": [],
+      "affected_prefixes": ["192.168.3.0/24"],
+      "confidence": 0.90,
+      "reasoning": "Step 1: All neighbors are Full on all routers, ruling out link failure/flapping. Step 2: spine1's routing table has routes for 192.168.1.0/24, 192.168.2.0/24, and 192.168.4.0/24, but is MISSING 192.168.3.0/24 (leaf3's host subnet). Step 3: leaf3's Router LSA shows link_count=4 instead of expected 5, meaning it dropped the network statement for its host subnet. Step 4: No static routes, no counter anomalies. This is a missing OSPF route caused by a withdrawn network statement on leaf3.",
+      "remediation": "Restore the OSPF network statement on leaf3: vtysh -c 'configure terminal' -c 'router ospf' -c 'network 192.168.3.0/24 area 0'"
+    }
+  },
+  {
+    "description": "Counter anomaly on spine3:eth2",
+    "input": {
+      "snapshot_id": "example_005",
+      "routers": {
+        "spine3": {
+          "router_name": "spine3",
+          "router_id": "10.0.0.3",
+          "neighbors": [
+            {"neighbor_id": "10.0.1.1", "state": "Full", "interface": "eth1"},
+            {"neighbor_id": "10.0.1.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.1.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.1.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth2": {"name": "eth2", "link_status": "up", "counters": {"error_rate": 8.5, "drop_rate": 3.2}},
+            "eth3": {"name": "eth3", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth4": {"name": "eth4", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "routing_table": {
+            "routes": {
+              "192.168.1.0/24": [{"prefix": "192.168.1.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}],
+              "192.168.2.0/24": [{"prefix": "192.168.2.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}],
+              "192.168.3.0/24": [{"prefix": "192.168.3.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}],
+              "192.168.4.0/24": [{"prefix": "192.168.4.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}]
+            }
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.0.3", "link_count": 5, "advertising_router": "10.0.0.3"}
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "fault_detected": true,
+      "fault_class": "counter_anomaly",
+      "location": "spine3:eth2",
+      "affected_routers": ["spine3"],
+      "affected_interfaces": ["spine3:eth2"],
+      "affected_prefixes": [],
+      "confidence": 0.85,
+      "reasoning": "Step 1: All neighbors are Full, no link failures. Step 2: All routes present, no stale or missing routes. Step 3: spine3:eth2 has error_rate=8.5% and drop_rate=3.2%, both well above the 1% warning and 5% critical thresholds. Step 4: All other interfaces on spine3 are clean (0% error/drop), so this is localized to eth2. Step 5: No neighbor state changes despite the errors, meaning OSPF hellos are still getting through. This is a counter anomaly indicating hardware degradation or congestion on spine3:eth2.",
+      "remediation": "Investigate packet loss on spine3:eth2: check for congestion, QoS misconfiguration, or hardware errors (CRC, FCS)."
+    }
+  },
+  {
+    "description": "No fault - healthy network",
+    "input": {
+      "snapshot_id": "example_006",
+      "routers": {
+        "spine1": {
+          "router_name": "spine1",
+          "router_id": "10.0.0.1",
+          "neighbors": [
+            {"neighbor_id": "10.0.1.1", "state": "Full", "interface": "eth1"},
+            {"neighbor_id": "10.0.1.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.1.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.1.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth2": {"name": "eth2", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth3": {"name": "eth3", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth4": {"name": "eth4", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "routing_table": {
+            "routes": {
+              "192.168.1.0/24": [{"prefix": "192.168.1.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}],
+              "192.168.2.0/24": [{"prefix": "192.168.2.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}],
+              "192.168.3.0/24": [{"prefix": "192.168.3.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}],
+              "192.168.4.0/24": [{"prefix": "192.168.4.0", "prefix_len": 24, "protocol": "ospf", "distance": 110}]
+            }
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.0.1", "link_count": 5, "advertising_router": "10.0.0.1"}
+            ]
+          }
+        },
+        "leaf1": {
+          "router_name": "leaf1",
+          "router_id": "10.0.1.1",
+          "neighbors": [
+            {"neighbor_id": "10.0.0.1", "state": "Full", "interface": "eth1"},
+            {"neighbor_id": "10.0.0.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.0.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.0.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.1.1", "link_count": 6, "advertising_router": "10.0.1.1"}
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "fault_detected": false,
+      "fault_class": "none",
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "Step 1: All neighbors are in Full state on both spine1 and leaf1. Step 2: All interfaces are up with zero error and drop rates. Step 3: All expected host subnets (192.168.1-4.0/24) are present in spine1's routing table via OSPF. Step 4: LSDB is consistent with expected link counts. No anomalies detected.",
+      "remediation": null
+    }
+  },
+  {
+    "description": "Ambiguous: borderline counter anomaly with elevated retransmits",
+    "input": {
+      "snapshot_id": "example_007",
+      "routers": {
+        "spine4": {
+          "router_name": "spine4",
+          "router_id": "10.0.0.4",
+          "neighbors": [
+            {"neighbor_id": "10.0.1.1", "state": "Full", "interface": "eth1", "retransmit_counter": 3},
+            {"neighbor_id": "10.0.1.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.1.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.1.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "up", "counters": {"error_rate": 1.2, "drop_rate": 0.4}},
+            "eth2": {"name": "eth2", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth3": {"name": "eth3", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}},
+            "eth4": {"name": "eth4", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.0.4", "link_count": 5, "advertising_router": "10.0.0.4"}
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "fault_detected": true,
+      "fault_class": "counter_anomaly",
+      "location": "spine4:eth1",
+      "affected_routers": ["spine4"],
+      "affected_interfaces": ["spine4:eth1"],
+      "affected_prefixes": [],
+      "confidence": 0.60,
+      "reasoning": "Step 1: All neighbors are Full, but spine4's neighbor on eth1 has retransmit_counter=3, indicating packet loss is affecting OSPF. Step 2: spine4:eth1 has error_rate=1.2% (above 1% threshold) and drop_rate=0.4% (below threshold but non-zero). Step 3: This is borderline - the error rate just crosses the threshold, and the retransmits suggest the link may be degrading toward a flapping state. Step 4: Since the neighbor is still Full and the error rate is only mildly elevated, this is classified as counter_anomaly rather than flapping_link, but confidence is lower due to the ambiguity.",
+      "remediation": "Monitor spine4:eth1 closely. If error rate continues to increase or neighbor state becomes unstable, investigate the physical link."
+    }
+  },
+  {
+    "description": "Ambiguous: link failure with prior flapping history (high LSA sequence numbers)",
+    "input": {
+      "snapshot_id": "example_008",
+      "routers": {
+        "spine1": {
+          "router_name": "spine1",
+          "router_id": "10.0.0.1",
+          "neighbors": [
+            {"neighbor_id": "10.0.1.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.1.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.1.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth2": {"name": "eth2", "link_status": "down", "counters": {"error_rate": 2.1, "drop_rate": 1.5}},
+            "eth3": {"name": "eth3", "link_status": "up", "counters": {"error_rate": 0.0, "drop_rate": 0.0}}
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.0.1", "link_count": 4, "advertising_router": "10.0.0.1", "sequence_number": "0x80000012"},
+              {"lsa_id": "10.0.1.2", "link_count": 5, "advertising_router": "10.0.1.2", "sequence_number": "0x80000010"}
+            ]
+          }
+        },
+        "leaf2": {
+          "router_name": "leaf2",
+          "router_id": "10.0.1.2",
+          "neighbors": [
+            {"neighbor_id": "10.0.0.2", "state": "Full", "interface": "eth2"},
+            {"neighbor_id": "10.0.0.3", "state": "Full", "interface": "eth3"},
+            {"neighbor_id": "10.0.0.4", "state": "Full", "interface": "eth4"}
+          ],
+          "interfaces": {
+            "eth1": {"name": "eth1", "link_status": "down", "counters": {"error_rate": 1.8, "drop_rate": 1.2}}
+          },
+          "lsdb": {
+            "router_lsas": [
+              {"lsa_id": "10.0.1.2", "link_count": 5, "advertising_router": "10.0.1.2", "sequence_number": "0x80000010"}
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "spine1:eth2",
+      "affected_routers": ["spine1", "leaf2"],
+      "affected_interfaces": ["spine1:eth2", "leaf2:eth1"],
+      "affected_prefixes": [],
+      "confidence": 0.75,
+      "reasoning": "Step 1: spine1 is missing neighbor 10.0.1.2 (leaf2), and eth2 is DOWN. leaf2 is missing neighbor 10.0.0.1 (spine1), and eth1 is DOWN. This is a symmetric link failure. Step 2: However, LSA sequence numbers are unusually high (0x80000012 for spine1, 0x80000010 for leaf2), which strongly suggests this link was flapping before it finally stayed down. Step 3: Error counters on both sides (2.1%/1.5% and 1.8%/1.2%) are elevated, consistent with intermittent connectivity before the final failure. Step 4: The CURRENT state is a link failure, but the evidence suggests it was preceded by flapping. Confidence is reduced because the root cause may be intermittent (flapping) rather than a clean failure.",
+      "remediation": "The link likely has a physical issue causing intermittent failure. Check cables, transceivers, and optical power levels on spine1:eth2 <-> leaf2:eth1 before bringing the link back up."
+    }
+  }
+]

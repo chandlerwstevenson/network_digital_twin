@@ -1,0 +1,12 @@
+{
+  "router_id": "10.0.1.1",
+  "description": "Leaf1 must have OSPF authentication on both eth1 and eth2 (eth1 is missing auth)",
+  "networks": [
+    {"prefix": "10.0.1.1/32", "area": "0"},
+    {"prefix": "192.168.1.0/24", "area": "0"}
+  ],
+  "interfaces": {
+    "eth1": {"area": "0", "auth_required": true},
+    "eth2": {"area": "0", "auth_required": true}
+  }
+}

@@ -1,0 +1,607 @@
+[
+  {
+    "trial_id": "trial_20260302_055747_cb87c00e",
+    "timestamp": "2026-03-02 05:58:20.433323",
+    "injected_fault_type": "stale_route",
+    "injected_fault_location": "leaf2:192.168.4.0/24",
+    "injected_fault_params": {
+      "fault_class": "stale_route",
+      "scenario": "leaf2_stale_route_to_leaf4",
+      "compound": false,
+      "location": "leaf2:192.168.4.0/24"
+    },
+    "pre_fault_snapshot_id": "20260302_055747_528294",
+    "post_fault_snapshot_id": "20260302_055804_213438",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "stale_route",
+      "location": "leaf2:192.168.4.0/24",
+      "affected_routers": [
+        "spine1",
+        "leaf2",
+        "spine2",
+        "spine4",
+        "spine3"
+      ],
+      "affected_interfaces": [],
+      "affected_prefixes": [
+        "192.168.2.0/24",
+        "192.168.4.0/24",
+        "192.168.3.0/24",
+        "192.168.1.0/24"
+      ],
+      "confidence": 0.85,
+      "reasoning": "Static route on leaf2 for 192.168.4.0/24 may override OSPF",
+      "remediation": "Remove incorrect static route on leaf2: 'no ip route <prefix>'",
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "[MOCK] No faults detected",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": true,
+    "rule_based_correct_location": true,
+    "llm_correct_class": false,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260302_055820_2cb1dc81",
+    "timestamp": "2026-03-02 05:58:54.116332",
+    "injected_fault_type": "counter_anomaly",
+    "injected_fault_location": "spine1:eth1",
+    "injected_fault_params": {
+      "fault_class": "counter_anomaly",
+      "scenario": "spine1_eth1_packet_loss",
+      "compound": false,
+      "location": "spine1:eth1"
+    },
+    "pre_fault_snapshot_id": "20260302_055820_435921",
+    "post_fault_snapshot_id": "20260302_055837_409982",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "missing_route",
+      "location": "leaf2:192.168.4.0/24",
+      "affected_routers": [
+        "leaf2"
+      ],
+      "affected_interfaces": [],
+      "affected_prefixes": [
+        "192.168.4.0/24"
+      ],
+      "confidence": 0.85,
+      "reasoning": "Route to 192.168.4.0/24 withdrawn on leaf2",
+      "remediation": "Restore OSPF network statement: 'network <prefix> area 0' on affected router",
+      "diagnosis_time_ms": 2,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "[MOCK] No faults detected",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": false,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260302_055854_d9951419",
+    "timestamp": "2026-03-02 05:59:28.311651",
+    "injected_fault_type": "stale_route",
+    "injected_fault_location": "leaf2:192.168.4.0/24",
+    "injected_fault_params": {
+      "fault_class": "stale_route",
+      "scenario": "leaf2_stale_route_to_leaf4",
+      "compound": false,
+      "location": "leaf2:192.168.4.0/24"
+    },
+    "pre_fault_snapshot_id": "20260302_055854_120330",
+    "post_fault_snapshot_id": "20260302_055912_056868",
+    "rule_based_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "All checks passed - network is healthy",
+      "remediation": null,
+      "diagnosis_time_ms": 2,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "[MOCK] No faults detected",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": false,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260302_055928_7d6727f7",
+    "timestamp": "2026-03-02 06:00:02.607109",
+    "injected_fault_type": "link_failure",
+    "injected_fault_location": "spine4:eth4",
+    "injected_fault_params": {
+      "fault_class": "link_failure",
+      "scenario": "triple_fault",
+      "compound": true,
+      "location": "spine4:eth4"
+    },
+    "pre_fault_snapshot_id": "20260302_055928_312474",
+    "post_fault_snapshot_id": "20260302_055946_407637",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "missing_route",
+      "location": "spine1:10.1.1.4/31",
+      "affected_routers": [
+        "spine1",
+        "leaf3",
+        "leaf2",
+        "leaf1",
+        "leaf4",
+        "spine2",
+        "spine4",
+        "spine3"
+      ],
+      "affected_interfaces": [
+        "spine4:10.0.1.3",
+        "leaf1:10.0.0.1",
+        "spine2:10.0.1.3",
+        "spine1:10.0.0.1",
+        "leaf3:10.0.1.3",
+        "leaf1:10.0.1.3",
+        "spine3:10.0.0.1",
+        "leaf3:eth1",
+        "leaf3:10.0.0.1",
+        "leaf2:10.0.1.3",
+        "leaf2:10.0.0.1",
+        "spine2:10.0.0.1",
+        "leaf4:10.0.0.1",
+        "spine3:10.0.1.3",
+        "leaf4:10.0.1.3",
+        "spine4:10.0.0.1",
+        "spine1:10.0.1.3"
+      ],
+      "affected_prefixes": [
+        "10.0.0.4/32",
+        "10.0.1.4/32",
+        "10.0.1.2/32",
+        "10.0.1.1/32",
+        "10.1.1.2/31",
+        "10.1.2.4/31",
+        "10.1.1.0/31",
+        "10.1.4.4/31",
+        "10.1.1.6/31",
+        "10.1.1.4/31",
+        "10.1.3.4/31",
+        "10.0.1.3/32",
+        "192.168.4.0/24",
+        "10.0.0.2/32",
+        "10.0.0.3/32",
+        "10.0.0.1/32"
+      ],
+      "confidence": 0.85,
+      "reasoning": "Route to 10.1.1.4/31 withdrawn on spine1",
+      "remediation": "Restore OSPF network statement: 'network <prefix> area 0' on affected router",
+      "diagnosis_time_ms": 3,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "leaf3:eth1",
+      "affected_routers": [
+        "leaf3"
+      ],
+      "affected_interfaces": [
+        "leaf3:eth1"
+      ],
+      "affected_prefixes": [],
+      "confidence": 0.9,
+      "reasoning": "[MOCK] Interface is down",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": true,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260302_060002_5dd4aae4",
+    "timestamp": "2026-03-02 06:00:35.560137",
+    "injected_fault_type": "link_failure",
+    "injected_fault_location": "spine2:eth2",
+    "injected_fault_params": {
+      "fault_class": "link_failure",
+      "scenario": "spine2_leaf2_link_down",
+      "compound": false,
+      "location": "spine2:eth2"
+    },
+    "pre_fault_snapshot_id": "20260302_060002_609366",
+    "post_fault_snapshot_id": "20260302_060019_710625",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "missing_route",
+      "location": "spine1:10.1.2.2/31",
+      "affected_routers": [
+        "spine1",
+        "leaf3",
+        "leaf2",
+        "leaf1",
+        "leaf4",
+        "spine2",
+        "spine4",
+        "spine3"
+      ],
+      "affected_interfaces": [
+        "leaf4:10.0.0.2",
+        "leaf2:10.0.1.2",
+        "spine3:10.0.0.2",
+        "leaf3:10.0.0.2",
+        "leaf4:10.0.1.2",
+        "spine4:10.0.1.2",
+        "leaf1:10.0.0.2",
+        "spine4:10.0.0.2",
+        "leaf1:10.0.1.2",
+        "leaf2:10.0.0.2",
+        "leaf3:10.0.1.2",
+        "spine2:10.0.1.2",
+        "leaf2:eth2",
+        "spine1:10.0.0.2",
+        "spine2:10.0.0.2",
+        "spine3:10.0.1.2",
+        "spine1:10.0.1.2"
+      ],
+      "affected_prefixes": [
+        "10.0.1.1/32",
+        "10.0.0.1/32",
+        "10.0.1.4/32",
+        "10.0.1.2/32",
+        "10.1.2.4/31",
+        "10.1.1.0/31",
+        "10.1.4.4/31",
+        "10.1.3.4/31",
+        "10.0.1.3/32",
+        "10.0.0.2/32",
+        "10.1.4.2/31",
+        "10.0.0.3/32",
+        "10.1.2.0/31",
+        "10.0.0.4/32",
+        "10.1.1.2/31",
+        "10.1.1.6/31",
+        "10.1.2.6/31",
+        "192.168.4.0/24",
+        "10.1.2.2/31",
+        "10.1.3.2/31"
+      ],
+      "confidence": 0.85,
+      "reasoning": "Route to 10.1.2.2/31 withdrawn on spine1",
+      "remediation": "Restore OSPF network statement: 'network <prefix> area 0' on affected router",
+      "diagnosis_time_ms": 4,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "leaf2:eth2",
+      "affected_routers": [
+        "leaf2"
+      ],
+      "affected_interfaces": [
+        "leaf2:eth2"
+      ],
+      "affected_prefixes": [],
+      "confidence": 0.9,
+      "reasoning": "[MOCK] Interface is down",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": true,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260302_060035_155cc4c3",
+    "timestamp": "2026-03-02 06:01:39.083045",
+    "injected_fault_type": "flapping_link",
+    "injected_fault_location": "spine1:eth2",
+    "injected_fault_params": {
+      "fault_class": "flapping_link",
+      "scenario": "spine1_leaf2_flapping",
+      "compound": false,
+      "location": "spine1:eth2"
+    },
+    "pre_fault_snapshot_id": "20260302_060035_562158",
+    "post_fault_snapshot_id": "20260302_060123_011256",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "unknown",
+      "location": "spine2",
+      "affected_routers": [
+        "spine2",
+        "leaf2"
+      ],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 0.5,
+      "reasoning": "Anomalies detected but fault type unclear",
+      "remediation": null,
+      "diagnosis_time_ms": 2,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "[MOCK] No faults detected",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": false,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260302_060139_9c3b170c",
+    "timestamp": "2026-03-02 06:02:42.727857",
+    "injected_fault_type": "flapping_link",
+    "injected_fault_location": "spine1:eth2",
+    "injected_fault_params": {
+      "fault_class": "flapping_link",
+      "scenario": "spine1_leaf2_flapping",
+      "compound": false,
+      "location": "spine1:eth2"
+    },
+    "pre_fault_snapshot_id": "20260302_060139_085104",
+    "post_fault_snapshot_id": "20260302_060226_761368",
+    "rule_based_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "All checks passed - network is healthy",
+      "remediation": null,
+      "diagnosis_time_ms": 3,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "[MOCK] No faults detected",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": false,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260302_060242_0c6cbdb3",
+    "timestamp": "2026-03-02 06:09:17.195662",
+    "injected_fault_type": "missing_route",
+    "injected_fault_location": "leaf1:192.168.1.0/24",
+    "injected_fault_params": {
+      "fault_class": "missing_route",
+      "scenario": "leaf1_missing_host_subnet",
+      "compound": false,
+      "location": "leaf1:192.168.1.0/24"
+    },
+    "pre_fault_snapshot_id": "20260302_060242_729142",
+    "post_fault_snapshot_id": "20260302_060259_914125",
+    "rule_based_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "All checks passed - network is healthy",
+      "remediation": null,
+      "diagnosis_time_ms": 2,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "[MOCK] No faults detected",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": false,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260302_060917_a8264697",
+    "timestamp": "2026-03-02 07:52:54.780928",
+    "injected_fault_type": "link_failure",
+    "injected_fault_location": "spine4:eth4",
+    "injected_fault_params": {
+      "fault_class": "link_failure",
+      "scenario": "triple_fault",
+      "compound": true,
+      "location": "spine4:eth4"
+    },
+    "pre_fault_snapshot_id": "20260302_060917_196567",
+    "post_fault_snapshot_id": "20260302_062018_178326",
+    "rule_based_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "missing_route",
+      "location": "spine1:10.1.1.4/31",
+      "affected_routers": [
+        "spine1",
+        "leaf3",
+        "leaf2",
+        "leaf1",
+        "leaf4",
+        "spine2",
+        "spine4",
+        "spine3"
+      ],
+      "affected_interfaces": [
+        "spine4:10.0.1.3",
+        "leaf1:10.0.0.1",
+        "spine2:10.0.1.3",
+        "spine1:10.0.0.1",
+        "leaf3:10.0.1.3",
+        "leaf1:10.0.1.3",
+        "spine3:10.0.0.1",
+        "leaf3:eth1",
+        "leaf3:10.0.0.1",
+        "leaf2:10.0.1.3",
+        "leaf2:10.0.0.1",
+        "spine2:10.0.0.1",
+        "leaf4:10.0.0.1",
+        "spine3:10.0.1.3",
+        "leaf4:10.0.1.3",
+        "spine4:10.0.0.1",
+        "spine1:10.0.1.3"
+      ],
+      "affected_prefixes": [
+        "10.0.0.4/32",
+        "10.0.1.4/32",
+        "10.0.1.2/32",
+        "10.0.1.1/32",
+        "10.1.1.2/31",
+        "10.1.2.4/31",
+        "10.1.1.0/31",
+        "10.1.4.4/31",
+        "10.1.1.6/31",
+        "10.1.1.4/31",
+        "10.1.3.4/31",
+        "10.0.1.3/32",
+        "10.0.0.2/32",
+        "10.0.0.3/32",
+        "10.0.0.1/32"
+      ],
+      "confidence": 0.85,
+      "reasoning": "Route to 10.1.1.4/31 withdrawn on spine1",
+      "remediation": "Restore OSPF network statement: 'network <prefix> area 0' on affected router",
+      "diagnosis_time_ms": 1,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": true,
+      "fault_class": "link_failure",
+      "location": "leaf3:eth1",
+      "affected_routers": [
+        "leaf3"
+      ],
+      "affected_interfaces": [
+        "leaf3:eth1"
+      ],
+      "affected_prefixes": [],
+      "confidence": 0.9,
+      "reasoning": "[MOCK] Interface is down",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": true,
+    "llm_correct_location": false
+  },
+  {
+    "trial_id": "trial_20260302_075254_7fd97d9e",
+    "timestamp": "2026-03-02 14:02:24.277703",
+    "injected_fault_type": "link_failure",
+    "injected_fault_location": "leaf3:eth4",
+    "injected_fault_params": {
+      "fault_class": "link_failure",
+      "scenario": "leaf3_spine4_link_down",
+      "compound": false,
+      "location": "leaf3:eth4"
+    },
+    "pre_fault_snapshot_id": "20260302_075254_797203",
+    "post_fault_snapshot_id": "20260302_095359_783477",
+    "rule_based_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "All checks passed - network is healthy",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "llm_diagnosis": {
+      "fault_detected": false,
+      "fault_class": null,
+      "location": null,
+      "affected_routers": [],
+      "affected_interfaces": [],
+      "affected_prefixes": [],
+      "confidence": 1.0,
+      "reasoning": "[MOCK] No faults detected",
+      "remediation": null,
+      "diagnosis_time_ms": 0,
+      "raw_output": null
+    },
+    "rule_based_correct_class": false,
+    "rule_based_correct_location": false,
+    "llm_correct_class": false,
+    "llm_correct_location": false
+  }
+]
