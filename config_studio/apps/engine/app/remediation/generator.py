@@ -19,13 +19,11 @@ class RemediationGenerator:
     def enrich(self, findings: list[Finding], lines: list[str]) -> list[Finding]:
         """Add remediation/rollback to findings that are missing them."""
         for finding in findings:
-            # Only enrich if remediation is empty or a placeholder
-            if not finding.remediation or finding.remediation.startswith("!"):
-                continue  # Already has remediation from the linter
-
-            # Ensure remediation has full command context
-            finding.remediation = self._ensure_context(finding.remediation, finding, lines)
-            finding.rollback = self._ensure_context(finding.rollback, finding, lines)
+            # Normalize any remediation/rollback that exists so it is terminal-ready.
+            if finding.remediation:
+                finding.remediation = self._ensure_context(finding.remediation, finding, lines)
+            if finding.rollback:
+                finding.rollback = self._ensure_context(finding.rollback, finding, lines)
 
         return findings
 

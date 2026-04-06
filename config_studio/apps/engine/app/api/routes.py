@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Depends
 
 from app.api.schemas import (
     AnalyzeRequest,
@@ -42,7 +42,7 @@ def _verify_key(x_api_key: str = Header(None)):
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
-async def analyze_config(req: AnalyzeRequest, _=Header(None, alias="x-api-key")):
+async def analyze_config(req: AnalyzeRequest, _=Depends(_verify_key)):
     """Run full config analysis: parse, lint, check security, score."""
     review_id = str(uuid.uuid4())
     config_hash = hashlib.sha256(req.config_text.encode()).hexdigest()
@@ -134,7 +134,7 @@ async def analyze_config(req: AnalyzeRequest, _=Header(None, alias="x-api-key"))
 
 
 @router.post("/compare", response_model=CompareResponse)
-async def compare_configs(req: CompareRequest):
+async def compare_configs(req: CompareRequest, _=Depends(_verify_key)):
     """Compare running vs. startup config — flag 'lost on reload' commands."""
     vendor_info = detect_vendor(req.running_config) if not req.vendor else VendorDetection(
         vendor=req.vendor, confidence=1.0
@@ -174,7 +174,7 @@ async def compare_configs(req: CompareRequest):
 
 
 @router.post("/query", response_model=NLQueryResponse)
-async def query_config(req: NLQueryRequest):
+async def query_config(req: NLQueryRequest, _=Depends(_verify_key)):
     """Natural language query against a config using Claude API."""
     vendor_info = detect_vendor(req.config_text) if not req.vendor else VendorDetection(
         vendor=req.vendor, confidence=1.0

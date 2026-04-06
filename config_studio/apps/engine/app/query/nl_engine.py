@@ -67,12 +67,8 @@ async def answer_query(
             confidence=0.9,
         )
 
-    except Exception as e:
-        return NLQueryResponse(
-            answer=f"LLM query failed: {str(e)}. Falling back to keyword search.",
-            line_references=[],
-            confidence=0.0,
-        )
+    except Exception:
+        return _fallback_query(config_text, question)
 
 
 def _fallback_query(config_text: str, question: str) -> NLQueryResponse:
