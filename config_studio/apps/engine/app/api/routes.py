@@ -5,6 +5,9 @@ from __future__ import annotations
 import base64
 import hashlib
 import io
+import json
+import urllib.error
+import urllib.request
 import uuid
 import zipfile
 from datetime import datetime, timezone
@@ -27,6 +30,8 @@ from app.api.schemas import (
     NLQueryResponse,
     MultiConfigQueryRequest,
     MultiConfigQueryResponse,
+    PipelineReviewRequest,
+    PipelineReviewResponse,
     VendorDetection,
     ReviewStatus,
     SnippetInfo,
@@ -58,6 +63,7 @@ from app.correlation import correlate_configs
 router = APIRouter()
 
 ALLOWED_BATCH_EXTENSIONS = {".txt", ".conf", ".cfg", ".log", ".config", ".cnf", ".txt.bak"}
+SEVERITY_RANK = {"info": 1, "warning": 2, "critical": 3}
 
 
 def _attach_context(findings, lines: list[str]):
@@ -226,6 +232,35 @@ def _extract_batch_zip(req: BatchReviewRequest) -> list[tuple[str, str]]:
     if len(extracted) > 50:
         raise HTTPException(status_code=400, detail="Batch review supports up to 50 config files per ZIP upload.")
     return extracted
+
+
+def _send_review_webhook(webhook_url: str, payload: dict, headers: dict[str, str] | None = None) -> dict[str, str | bool | int | None]:
+    body = json.dumps(payload).encode("utf-8")
+    request_headers = {"Content-Type": "application/json", **(headers or {})}
+    request = urllib.request.Request(webhook_url, data=body, headers=request_headers, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return {
+                "attempted": True,
+                "delivered": 200 <= response.status < 300,
+                "status_code": response.status,
+                "detail": "Webhook delivered.",
+            }
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        return {
+            "attempted": True,
+            "delivered": False,
+            "status_code": exc.code,
+            "detail": detail or f"Webhook returned HTTP {exc.code}.",
+        }
+    except Exception as exc:  # pragma: no cover
+        return {
+            "attempted": True,
+            "delivered": False,
+            "status_code": None,
+            "detail": str(exc),
+        }
 
 
 def _run_analysis(req: AnalyzeRequest) -> AnalyzeResponse:
@@ -476,6 +511,75 @@ async def correlate_multi_config(req: CrossConfigRequest, _=Depends(_verify_key)
         "total": len(findings),
     }
     return CrossConfigResponse(findings=findings, inferred_links=inferred_links, summary=summary)
+
+
+@router.post("/pipeline/review", response_model=PipelineReviewResponse)
+async def pipeline_review(req: PipelineReviewRequest, _=Depends(_verify_key)):
+    """CI/CD-friendly review endpoint for pre-merge and pre-deploy gates."""
+    review = _run_analysis(
+        AnalyzeRequest(
+            config_text=req.config_text,
+            vendor=req.vendor,
+            os_version=req.os_version,
+            template_id=req.template_id,
+            template_name=req.template_name,
+            template_version=req.template_version,
+            engineer_name=req.engineer_name,
+            template_rules=req.template_rules,
+            quick_pass=req.quick_pass,
+            snippet_mode=req.snippet_mode,
+            context_hint=req.context_hint,
+        )
+    )
+
+    threshold = req.fail_on_severity.value
+    blocking_findings = [
+        finding for finding in review.findings
+        if SEVERITY_RANK.get(finding.severity.value, 0) >= SEVERITY_RANK.get(threshold, 0)
+    ]
+    blocking_count = len(blocking_findings)
+    should_block = blocking_count > 0
+    if req.max_blocking_findings is not None:
+        should_block = blocking_count >= req.max_blocking_findings
+
+    response = PipelineReviewResponse(
+        gate_status="block" if should_block else "pass",
+        should_block=should_block,
+        fail_on_severity=req.fail_on_severity,
+        blocking_findings_count=blocking_count,
+        max_blocking_findings=req.max_blocking_findings,
+        blocking_findings=blocking_findings,
+        summary={
+            "review_id": review.review_id,
+            "pass_fail": review.pass_fail,
+            "config_hash": review.config_hash,
+            "platform_detected": review.report.header.platform_detected,
+            "hostname": review.report.header.hostname or "unknown",
+            "total_findings": review.summary.total_findings,
+            "critical": review.summary.critical_count,
+            "warning": review.summary.warning_count,
+            "info": review.summary.info_count,
+        },
+        review=review if req.include_review else None,
+        webhook={"attempted": False, "delivered": False, "status_code": None, "detail": None},
+    )
+
+    if req.webhook_url:
+        response.webhook = _send_review_webhook(
+            req.webhook_url,
+            {
+                "event": "config_review.completed",
+                "gate_status": response.gate_status,
+                "should_block": response.should_block,
+                "fail_on_severity": response.fail_on_severity.value,
+                "blocking_findings_count": response.blocking_findings_count,
+                "summary": response.summary,
+                "review": response.review.model_dump() if response.review else None,
+            },
+            req.webhook_headers,
+        )
+
+    return response
 
 
 @router.post("/query", response_model=NLQueryResponse)

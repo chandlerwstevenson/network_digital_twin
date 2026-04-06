@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -164,6 +166,64 @@ router bgp 65002
     assert "Cross-device BGP peer mismatch" in titles
     assert body["summary"]["total"] >= 3
     assert len(body["inferred_links"]) >= 1
+
+
+def test_pipeline_review_requires_api_key():
+    response = client.post(
+        "/api/pipeline/review",
+        json={"config_text": "hostname r1"},
+    )
+    assert response.status_code == 401
+
+
+def test_pipeline_review_blocks_on_critical_findings():
+    response = client.post(
+        "/api/pipeline/review",
+        headers=HEADERS,
+        json={
+            "config_text": """hostname r1
+ip http server
+line vty 0 4
+ transport input telnet
+!""",
+            "fail_on_severity": "critical",
+            "include_review": False,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["gate_status"] == "block"
+    assert body["should_block"] is True
+    assert body["blocking_findings_count"] >= 1
+    assert body["review"] is None
+
+
+def test_pipeline_review_can_gate_on_warning_threshold_and_attempt_webhook():
+    with patch("app.api.routes._send_review_webhook", return_value={
+        "attempted": True,
+        "delivered": True,
+        "status_code": 200,
+        "detail": "Webhook delivered.",
+    }) as send_webhook:
+        response = client.post(
+            "/api/pipeline/review",
+            headers=HEADERS,
+            json={
+                "config_text": """hostname r1
+interface GigabitEthernet0/0
+ description Uplink
+ ip address 10.0.0.1 255.255.255.0
+!""",
+                "fail_on_severity": "warning",
+                "webhook_url": "https://example.test/hooks/config-review",
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["gate_status"] in ["pass", "block"]
+    assert body["webhook"]["attempted"] is True
+    send_webhook.assert_called_once()
 
 
 def test_query_requires_api_key():

@@ -1,0 +1,69 @@
+name: Config Studio pre-merge review
+
+on:
+  pull_request:
+    paths:
+      - '**/*.cfg'
+      - '**/*.conf'
+      - '**/*.txt'
+      - '**/*.log'
+
+jobs:
+  review-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick first changed config file
+        id: config
+        run: |
+          file=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(cfg|conf|txt|log)$' | head -n 1)
+          if [ -z "$file" ]; then
+            echo "No config files changed; nothing to review."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "path=$file" >> "$GITHUB_OUTPUT"
+
+      - name: Run Config Studio pipeline gate
+        if: steps.config.outputs.skip != 'true'
+        env:
+          CONFIG_STUDIO_URL: ${{ secrets.CONFIG_STUDIO_URL }}
+          CONFIG_STUDIO_API_KEY: ${{ secrets.CONFIG_STUDIO_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.request
+
+          config_path = os.environ.get('CONFIG_PATH') or '${{ steps.config.outputs.path }}'
+          with open(config_path, 'r', encoding='utf-8') as handle:
+              config_text = handle.read()
+
+          payload = {
+              'config_text': config_text,
+              'engineer_name': 'GitHub Actions',
+              'fail_on_severity': 'critical',
+              'include_review': False,
+          }
+
+          request = urllib.request.Request(
+              f"{os.environ['CONFIG_STUDIO_URL'].rstrip('/')}/api/pipeline/review",
+              data=json.dumps(payload).encode('utf-8'),
+              headers={
+                  'Content-Type': 'application/json',
+                  'x-api-key': os.environ['CONFIG_STUDIO_API_KEY'],
+              },
+              method='POST',
+          )
+
+          with urllib.request.urlopen(request, timeout=60) as response:
+              body = json.loads(response.read().decode('utf-8'))
+
+          print(json.dumps(body, indent=2))
+          if body.get('should_block'):
+              print('Config Studio gate blocked this change.', file=sys.stderr)
+              sys.exit(1)
+          PY
+        shell: bash

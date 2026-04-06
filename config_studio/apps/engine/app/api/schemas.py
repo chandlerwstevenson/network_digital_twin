@@ -106,6 +106,14 @@ class MultiConfigQueryRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
 
 
+class PipelineReviewRequest(AnalyzeRequest):
+    fail_on_severity: Severity = Severity.CRITICAL
+    max_blocking_findings: int | None = Field(default=None, ge=1)
+    include_review: bool = True
+    webhook_url: str | None = None
+    webhook_headers: dict[str, str] = Field(default_factory=dict)
+
+
 # ---------------------------------------------------------------------------
 # Template models
 # ---------------------------------------------------------------------------
@@ -291,3 +299,15 @@ class MultiConfigQueryResponse(BaseModel):
     answer: str
     matches: list[MultiConfigQueryMatch] = Field(default_factory=list)
     confidence: float = Field(ge=0.0, le=1.0)
+
+
+class PipelineReviewResponse(BaseModel):
+    gate_status: str
+    should_block: bool
+    fail_on_severity: Severity
+    blocking_findings_count: int
+    max_blocking_findings: int | None = None
+    blocking_findings: list[Finding] = Field(default_factory=list)
+    summary: dict[str, int | str | bool] = Field(default_factory=dict)
+    review: AnalyzeResponse | None = None
+    webhook: dict[str, str | bool | int | None] = Field(default_factory=dict)

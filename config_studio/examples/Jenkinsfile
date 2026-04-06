@@ -1,0 +1,57 @@
+pipeline {
+  agent any
+
+  environment {
+    CONFIG_STUDIO_URL = credentials('config-studio-url')
+    CONFIG_STUDIO_API_KEY = credentials('config-studio-api-key')
+  }
+
+  stages {
+    stage('Config Studio review') {
+      steps {
+        sh '''
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+          import urllib.request
+
+          changed = subprocess.check_output(['git', 'diff', '--name-only', 'HEAD~1', 'HEAD'], text=True).splitlines()
+          candidates = [path for path in changed if path.endswith(('.cfg', '.conf', '.txt', '.log'))]
+          if not candidates:
+              print('No config files changed; skipping gate.')
+              raise SystemExit(0)
+
+          with open(candidates[0], 'r', encoding='utf-8') as handle:
+              config_text = handle.read()
+
+          payload = {
+              'config_text': config_text,
+              'engineer_name': 'Jenkins',
+              'fail_on_severity': 'critical',
+              'include_review': False,
+          }
+          request = urllib.request.Request(
+              f"{os.environ['CONFIG_STUDIO_URL'].rstrip('/')}/api/pipeline/review",
+              data=json.dumps(payload).encode('utf-8'),
+              headers={
+                  'Content-Type': 'application/json',
+                  'x-api-key': os.environ['CONFIG_STUDIO_API_KEY'],
+              },
+              method='POST',
+          )
+
+          with urllib.request.urlopen(request, timeout=60) as response:
+              body = json.loads(response.read().decode('utf-8'))
+
+          print(json.dumps(body, indent=2))
+          if body.get('should_block'):
+              print('Config Studio gate blocked this build.', file=sys.stderr)
+              raise SystemExit(1)
+          PY
+        '''
+      }
+    }
+  }
+}
