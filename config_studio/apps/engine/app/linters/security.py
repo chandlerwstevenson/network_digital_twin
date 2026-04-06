@@ -37,15 +37,55 @@ class SecurityLinter(BaseLinter):
         has_copp = False
         has_enable_secret = False
         in_line_section = False
+        in_interface_section = False
         current_line_type = ""
+        current_interface = ""
         line_start = 0
+        interface_start = 0
         has_exec_timeout = False
+        interface_has_public_ip = False
+        interface_has_mgmt_plane = False
 
         for i, line in enumerate(lines):
             stripped = line.strip()
             line_num = i + 1
 
             # Track state
+            if stripped.startswith("interface "):
+                if in_interface_section and interface_has_public_ip and interface_has_mgmt_plane:
+                    findings.append(self._make_finding(
+                        line_start=interface_start,
+                        line_end=line_num - 1,
+                        severity=Severity.INFO,
+                        category=FindingCategory.SECURITY,
+                        title=f"Management plane may be exposed on {current_interface}",
+                        description=f"Interface {current_interface} appears to have a public IP and also permits management-plane services. Verify this interface is not exposed to untrusted networks.",
+                        remediation=f"configure terminal\ninterface {current_interface}\n ! Restrict management plane with ACLs or disable unnecessary management services\nend",
+                        rollback=f"configure terminal\ninterface {current_interface}\n ! Restore prior interface management exposure if intentional\nend",
+                        compliance_tags=["PCI-DSS-4.1", "NIST-800-53-SC-7"],
+                        reference_url="https://www.rfc-editor.org/rfc/rfc5737",
+                    ))
+                in_interface_section = True
+                current_interface = stripped.split(None, 1)[1] if len(stripped.split(None, 1)) > 1 else stripped
+                interface_start = line_num
+                interface_has_public_ip = False
+                interface_has_mgmt_plane = False
+            elif in_interface_section and not line.startswith(" ") and stripped and not stripped.startswith("!"):
+                if interface_has_public_ip and interface_has_mgmt_plane:
+                    findings.append(self._make_finding(
+                        line_start=interface_start,
+                        line_end=line_num - 1,
+                        severity=Severity.INFO,
+                        category=FindingCategory.SECURITY,
+                        title=f"Management plane may be exposed on {current_interface}",
+                        description=f"Interface {current_interface} appears to have a public IP and also permits management-plane services. Verify this interface is not exposed to untrusted networks.",
+                        remediation=f"configure terminal\ninterface {current_interface}\n ! Restrict management plane with ACLs or disable unnecessary management services\nend",
+                        rollback=f"configure terminal\ninterface {current_interface}\n ! Restore prior interface management exposure if intentional\nend",
+                        compliance_tags=["PCI-DSS-4.1", "NIST-800-53-SC-7"],
+                        reference_url="https://www.rfc-editor.org/rfc/rfc5737",
+                    ))
+                in_interface_section = False
+
             if stripped.startswith("line "):
                 in_line_section = True
                 current_line_type = stripped
@@ -66,8 +106,17 @@ class SecurityLinter(BaseLinter):
                             remediation=f"configure terminal\n{current_line_type}\n exec-timeout 10 0\nend",
                             rollback=f"configure terminal\n{current_line_type}\n no exec-timeout\nend",
                             compliance_tags=["CIS-Cisco-IOS", "NIST-800-53-AC-12"],
+                            reference_url="https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/sec_usr_cfg/configuration/xe-16/sec-user-config-xe-16-book/sec-setting_line_cmds.html",
                         ))
                 in_line_section = False
+
+            if in_interface_section and stripped.startswith("ip address "):
+                m = re.match(r"ip address\s+(\S+)\s+(\S+)", stripped)
+                if m and self._is_public_ipv4(m.group(1)):
+                    interface_has_public_ip = True
+
+            if in_interface_section and any(token in stripped.lower() for token in ["ip access-group", "snmp-server", "ip http", "ssh", "management"]):
+                interface_has_mgmt_plane = True
 
             if in_line_section and "exec-timeout" in stripped:
                 has_exec_timeout = True
@@ -101,6 +150,7 @@ class SecurityLinter(BaseLinter):
                         rollback="! Cannot rollback — password was already visible",
                         compliance_tags=["PCI-DSS-8.2.1", "NIST-800-53-IA-5", "CIS-Cisco-IOS"],
                         config_context=self._redact_password(stripped),
+                        reference_url="https://www.cisco.com/c/en/us/support/docs/security-vpn/password-encryption/12091-15.html",
                     ))
 
             # --- Type 7 weak encryption ---
@@ -116,6 +166,7 @@ class SecurityLinter(BaseLinter):
                     rollback="! Re-enter original password with type 7",
                     compliance_tags=["PCI-DSS-8.2.1", "NIST-800-53-IA-5"],
                     config_context=self._redact_password(stripped),
+                    reference_url="https://www.cisco.com/c/en/us/support/docs/security-vpn/password-encryption/12091-15.html",
                 ))
 
             # --- Enable password without secret ---
@@ -130,6 +181,7 @@ class SecurityLinter(BaseLinter):
                     remediation="configure terminal\nno enable password\nenable algorithm-type scrypt secret <new-password>\nend",
                     rollback="configure terminal\nno enable secret\nenable password <old-password>\nend",
                     compliance_tags=["CIS-Cisco-IOS", "DISA-STIG"],
+                    reference_url="https://www.cisco.com/c/en/us/support/docs/security-vpn/password-encryption/12091-15.html",
                 ))
             if stripped.startswith("enable secret"):
                 has_enable_secret = True
@@ -147,6 +199,7 @@ class SecurityLinter(BaseLinter):
                     remediation=f"configure terminal\nno snmp-server community {community}\nsnmp-server community <strong-string> RO <acl-name>\nend",
                     rollback=f"configure terminal\nno snmp-server community <new-string>\nsnmp-server community {community}\nend",
                     compliance_tags=["PCI-DSS-2.1", "CIS-Cisco-IOS", "NIST-800-53-CM-6"],
+                    reference_url="https://www.cisco.com/c/en/us/support/docs/ip/simple-network-management-protocol-snmp/7282-12.html",
                 ))
 
             # --- Weak encryption algorithms ---
@@ -164,6 +217,7 @@ class SecurityLinter(BaseLinter):
                         rollback="! Restore original crypto configuration",
                         compliance_tags=["PCI-DSS-4.1", "NIST-800-53-SC-13"],
                         config_context=stripped,
+                        reference_url="https://www.cisco.com/c/en/us/support/docs/security-vpn/ipsec-negotiation-ike-protocols/14106-howdoi.html",
                     ))
 
             # --- HTTP server without HTTPS ---
@@ -223,6 +277,7 @@ class SecurityLinter(BaseLinter):
                 remediation="configure terminal\nno ip http server\nip http secure-server\nend",
                 rollback="configure terminal\nip http server\nno ip http secure-server\nend",
                 compliance_tags=["PCI-DSS-4.1", "NIST-800-53-SC-8"],
+                reference_url="https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/sec_usr_http/configuration/xe-16/sec-usr-http-xe-16-book.html",
             ))
 
         if not has_aaa:
@@ -237,6 +292,7 @@ class SecurityLinter(BaseLinter):
                 remediation="configure terminal\naaa new-model\naaa authentication login default group tacacs+ local\naaa authorization exec default group tacacs+ local\nend",
                 rollback="configure terminal\nno aaa new-model\nend",
                 compliance_tags=["CIS-Cisco-IOS", "DISA-STIG", "NIST-800-53-IA-2", "PCI-DSS-8.1"],
+                reference_url="https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/sec_usr_aaa/configuration/xe-16/sec-usr-aaa-xe-16-book.html",
             ))
 
         if not has_copp:
@@ -250,6 +306,7 @@ class SecurityLinter(BaseLinter):
                 remediation="! Configure CoPP — see Cisco CoPP design guide for your platform",
                 rollback="! Remove CoPP policy-map from control-plane",
                 compliance_tags=["CIS-Cisco-IOS", "NIST-800-53-SC-5"],
+                reference_url="https://www.cisco.com/c/en/us/about/security-center/control-plane-policing.html",
             ))
 
         return findings
@@ -317,3 +374,20 @@ class SecurityLinter(BaseLinter):
     def _redact_password(line: str) -> str:
         """Redact actual password values from config context."""
         return re.sub(r"(password\s+(?:0|7|5|8|9)?\s*)\S+", r"\1****", line)
+
+    @staticmethod
+    def _is_public_ipv4(ip: str) -> bool:
+        if not re.match(r"^\d+\.\d+\.\d+\.\d+$", ip):
+            return False
+        octets = [int(x) for x in ip.split('.')]
+        if octets[0] == 10:
+            return False
+        if octets[0] == 172 and 16 <= octets[1] <= 31:
+            return False
+        if octets[0] == 192 and octets[1] == 168:
+            return False
+        if octets[0] == 127:
+            return False
+        if octets[0] == 169 and octets[1] == 254:
+            return False
+        return True

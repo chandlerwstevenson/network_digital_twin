@@ -49,6 +49,9 @@ class AnalyzeRequest(BaseModel):
     vendor: Vendor | None = None  # None = auto-detect
     os_version: str | None = None
     template_id: str | None = None
+    template_name: str | None = None
+    template_version: str | None = None
+    engineer_name: str | None = None
     template_rules: list[TemplateRule] | None = None
     quick_pass: bool = False
     snippet_mode: bool | None = None  # None = auto-detect
@@ -60,6 +63,16 @@ class CompareRequest(BaseModel):
     running_config: str = Field(..., min_length=1, max_length=500_000)
     startup_config: str = Field(..., min_length=1, max_length=500_000)
     vendor: Vendor | None = None
+
+
+class CrossConfigInput(BaseModel):
+    config_text: str = Field(..., min_length=1, max_length=500_000)
+    vendor: Vendor | None = None
+    hostname: str | None = None
+
+
+class CrossConfigRequest(BaseModel):
+    configs: list[CrossConfigInput] = Field(..., min_length=2, max_length=10)
 
 
 class NLQueryRequest(BaseModel):
@@ -133,6 +146,70 @@ class RiskScore(BaseModel):
     breakdown: dict[str, int] = Field(default_factory=dict)  # category -> subscore
 
 
+class ReviewSummary(BaseModel):
+    total_findings: int
+    critical_count: int
+    warning_count: int
+    info_count: int
+    categories: dict[str, int] = Field(default_factory=dict)  # category -> count
+
+
+class ReportHeader(BaseModel):
+    generated_at_utc: str
+    engineer_identity: str
+    config_hash: str
+    template_version_used: str
+    platform_detected: str
+    hostname: str | None = None
+
+
+class ExecutiveSummary(BaseModel):
+    pass_fail: bool
+    pass_fail_label: str
+    risk_score: int
+    risk_grade: str
+    finding_counts: dict[str, int] = Field(default_factory=dict)
+    benchmark_label: str
+
+
+class TemplateComplianceItem(BaseModel):
+    rule_name: str
+    severity: Severity
+    status: str
+    description: str
+
+
+class TemplateComplianceSummary(BaseModel):
+    template_name: str
+    template_version: str
+    passed_rules: int
+    failed_rules: int
+    deviations: list[TemplateComplianceItem] = Field(default_factory=list)
+
+
+class OrderedChangeScript(BaseModel):
+    generated: bool = False
+    rationale: str | None = None
+    apply_script: str = ""
+    rollback_script: str = ""
+    finding_order: list[str] = Field(default_factory=list)
+
+
+class ReportBody(BaseModel):
+    executive_summary: ExecutiveSummary
+    findings_detail: list[Finding]
+    template_compliance: TemplateComplianceSummary
+    ordered_change_script: OrderedChangeScript | None = None
+    config_diff: dict | None = None
+
+
+class ReviewReport(BaseModel):
+    review_id: str
+    format: str = "json"
+    header: ReportHeader
+    body: ReportBody
+
+
 class AnalyzeResponse(BaseModel):
     review_id: str
     status: ReviewStatus
@@ -143,20 +220,19 @@ class AnalyzeResponse(BaseModel):
     pass_fail: bool  # True = PASS (no Critical findings)
     summary: ReviewSummary
     config_hash: str  # SHA-256
-
-
-class ReviewSummary(BaseModel):
-    total_findings: int
-    critical_count: int
-    warning_count: int
-    info_count: int
-    categories: dict[str, int] = Field(default_factory=dict)  # category -> count
+    report: ReviewReport
 
 
 class CompareResponse(BaseModel):
     lost_on_reload: list[Finding]
     added_since_startup: list[dict]
     removed_since_startup: list[dict]
+
+
+class CrossConfigResponse(BaseModel):
+    findings: list[Finding]
+    inferred_links: list[dict] = Field(default_factory=list)
+    summary: dict[str, int] = Field(default_factory=dict)
 
 
 class NLQueryResponse(BaseModel):

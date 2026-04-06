@@ -76,6 +76,60 @@ export interface ReviewSummary {
   categories: Record<string, number>;
 }
 
+export interface ReportHeader {
+  generated_at_utc: string;
+  engineer_identity: string;
+  config_hash: string;
+  template_version_used: string;
+  platform_detected: string;
+  hostname?: string;
+}
+
+export interface ExecutiveSummary {
+  pass_fail: boolean;
+  pass_fail_label: string;
+  risk_score: number;
+  risk_grade: string;
+  finding_counts: Record<string, number>;
+  benchmark_label: string;
+}
+
+export interface TemplateComplianceItem {
+  rule_name: string;
+  severity: Severity;
+  status: string;
+  description: string;
+}
+
+export interface TemplateComplianceSummary {
+  template_name: string;
+  template_version: string;
+  passed_rules: number;
+  failed_rules: number;
+  deviations: TemplateComplianceItem[];
+}
+
+export interface OrderedChangeScript {
+  generated: boolean;
+  rationale?: string;
+  apply_script: string;
+  rollback_script: string;
+  finding_order: string[];
+}
+
+export interface ReviewReport {
+  review_id: string;
+  format: "json";
+  header: ReportHeader;
+  body: {
+    executive_summary: ExecutiveSummary;
+    findings_detail: Finding[];
+    template_compliance: TemplateComplianceSummary;
+    ordered_change_script?: OrderedChangeScript | null;
+    config_diff?: Record<string, unknown> | null;
+  };
+}
+
 export interface AnalyzeResponse {
   review_id: string;
   status: ReviewStatus;
@@ -86,6 +140,7 @@ export interface AnalyzeResponse {
   pass_fail: boolean;
   summary: ReviewSummary;
   config_hash: string;
+  report: ReviewReport;
 }
 
 // ---------------------------------------------------------------------------
