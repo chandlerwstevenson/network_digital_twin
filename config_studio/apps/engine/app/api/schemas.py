@@ -75,10 +75,35 @@ class CrossConfigRequest(BaseModel):
     configs: list[CrossConfigInput] = Field(..., min_length=2, max_length=10)
 
 
+class BatchReviewRequest(BaseModel):
+    zip_filename: str | None = None
+    zip_base64: str = Field(..., min_length=1)
+    vendor: Vendor | None = None
+    engineer_name: str | None = None
+    quick_pass: bool = False
+    snippet_mode: bool | None = None
+    context_hint: str | None = None
+    template_id: str | None = None
+    template_name: str | None = None
+    template_version: str | None = None
+    template_rules: list[TemplateRule] | None = None
+
+
 class NLQueryRequest(BaseModel):
     config_text: str = Field(..., min_length=1, max_length=500_000)
     question: str = Field(..., min_length=1, max_length=2000)
     vendor: Vendor | None = None
+
+
+class MultiConfigQueryItem(BaseModel):
+    config_text: str = Field(..., min_length=1, max_length=500_000)
+    vendor: Vendor | None = None
+    hostname: str | None = None
+
+
+class MultiConfigQueryRequest(BaseModel):
+    configs: list[MultiConfigQueryItem] = Field(..., min_length=2, max_length=10)
+    question: str = Field(..., min_length=1, max_length=2000)
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +260,34 @@ class CrossConfigResponse(BaseModel):
     summary: dict[str, int] = Field(default_factory=dict)
 
 
+class BatchReviewItem(BaseModel):
+    filename: str
+    config_text: str
+    review: AnalyzeResponse
+
+
+class BatchReviewResponse(BaseModel):
+    review_count: int
+    filenames: list[str] = Field(default_factory=list)
+    reviews: list[BatchReviewItem] = Field(default_factory=list)
+    cross_config: CrossConfigResponse | None = None
+    summary: dict[str, int] = Field(default_factory=dict)
+
+
 class NLQueryResponse(BaseModel):
     answer: str
     line_references: list[int] = Field(default_factory=list)
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
+class MultiConfigQueryMatch(BaseModel):
+    hostname: str
+    vendor: str
+    line_references: list[int] = Field(default_factory=list)
+    preview: list[str] = Field(default_factory=list)
+
+
+class MultiConfigQueryResponse(BaseModel):
+    answer: str
+    matches: list[MultiConfigQueryMatch] = Field(default_factory=list)
     confidence: float = Field(ge=0.0, le=1.0)

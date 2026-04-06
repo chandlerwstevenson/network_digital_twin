@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import io
 import uuid
+import zipfile
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Header, Depends
 from fastapi.responses import HTMLResponse, Response
@@ -16,8 +20,13 @@ from app.api.schemas import (
     CompareResponse,
     CrossConfigRequest,
     CrossConfigResponse,
+    BatchReviewRequest,
+    BatchReviewResponse,
+    BatchReviewItem,
     NLQueryRequest,
     NLQueryResponse,
+    MultiConfigQueryRequest,
+    MultiConfigQueryResponse,
     VendorDetection,
     ReviewStatus,
     SnippetInfo,
@@ -42,11 +51,13 @@ from app.templates.engine import TemplateEngine
 from app.templates.library import load_starter_templates, get_starter_template
 from app.remediation.generator import RemediationGenerator
 from app.scoring.risk import calculate_risk_score
-from app.query.nl_engine import answer_query
+from app.query.nl_engine import answer_query, answer_multi_config_query
 from app.reporting import build_report_html, render_report_pdf_bytes
 from app.correlation import correlate_configs
 
 router = APIRouter()
+
+ALLOWED_BATCH_EXTENSIONS = {".txt", ".conf", ".cfg", ".log", ".config", ".cnf", ".txt.bak"}
 
 
 def _attach_context(findings, lines: list[str]):
@@ -171,8 +182,53 @@ def _verify_key(x_api_key: str = Header(None)):
         raise HTTPException(status_code=401, detail="Invalid engine API key")
 
 
-@router.post("/analyze", response_model=AnalyzeResponse)
-async def analyze_config(req: AnalyzeRequest, _=Depends(_verify_key)):
+def _is_probably_text(raw: bytes) -> bool:
+    return bool(raw) and b"\x00" not in raw[:4096]
+
+
+def _extract_batch_zip(req: BatchReviewRequest) -> list[tuple[str, str]]:
+    try:
+        archive_bytes = base64.b64decode(req.zip_base64)
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=400, detail=f"Invalid ZIP payload: {exc}") from exc
+
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(archive_bytes))
+    except zipfile.BadZipFile as exc:
+        raise HTTPException(status_code=400, detail="Uploaded file is not a valid ZIP archive.") from exc
+
+    extracted: list[tuple[str, str]] = []
+    for info in archive.infolist():
+        if info.is_dir():
+            continue
+
+        suffixes = Path(info.filename).suffixes
+        extension_match = any(suffix.lower() in ALLOWED_BATCH_EXTENSIONS for suffix in (suffixes[-2:] or suffixes))
+        with archive.open(info) as handle:
+            raw = handle.read()
+
+        if not extension_match and not _is_probably_text(raw):
+            continue
+
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                text = raw.decode("latin-1")
+            except UnicodeDecodeError:
+                continue
+
+        if text.strip():
+            extracted.append((info.filename, text))
+
+    if not extracted:
+        raise HTTPException(status_code=400, detail="ZIP archive did not contain any readable config files.")
+    if len(extracted) > 50:
+        raise HTTPException(status_code=400, detail="Batch review supports up to 50 config files per ZIP upload.")
+    return extracted
+
+
+def _run_analysis(req: AnalyzeRequest) -> AnalyzeResponse:
     """Run full config analysis: parse, lint, check security, score."""
     review_id = str(uuid.uuid4())
     config_hash = hashlib.sha256(req.config_text.encode()).hexdigest()
@@ -280,6 +336,11 @@ async def analyze_config(req: AnalyzeRequest, _=Depends(_verify_key)):
     )
 
 
+@router.post("/analyze", response_model=AnalyzeResponse)
+async def analyze_config(req: AnalyzeRequest, _=Depends(_verify_key)):
+    return _run_analysis(req)
+
+
 @router.get("/templates/starter")
 async def list_starter_templates(_=Depends(_verify_key)):
     """Return curated starter templates for day-one use."""
@@ -289,7 +350,7 @@ async def list_starter_templates(_=Depends(_verify_key)):
 @router.post("/report/render")
 async def render_report(req: AnalyzeRequest, format: str = "html", _=Depends(_verify_key)):
     """Render a self-contained report artifact from the same underlying review data."""
-    review = await analyze_config(req, _)
+    review = _run_analysis(req)
     if format == "pdf":
         pdf_bytes = render_report_pdf_bytes(review)
         return Response(
@@ -299,6 +360,69 @@ async def render_report(req: AnalyzeRequest, format: str = "html", _=Depends(_ve
         )
     html = build_report_html(review)
     return HTMLResponse(content=html)
+
+
+@router.post("/batch-review", response_model=BatchReviewResponse)
+async def batch_review_configs(req: BatchReviewRequest, _=Depends(_verify_key)):
+    """Review a ZIP of configs in one session and optionally run cross-config correlation."""
+    extracted = _extract_batch_zip(req)
+    reviews: list[BatchReviewItem] = []
+
+    for filename, config_text in extracted:
+        review = _run_analysis(
+            AnalyzeRequest(
+                config_text=config_text,
+                vendor=req.vendor,
+                template_id=req.template_id,
+                template_name=req.template_name,
+                template_version=req.template_version,
+                engineer_name=req.engineer_name,
+                template_rules=req.template_rules,
+                quick_pass=req.quick_pass,
+                snippet_mode=req.snippet_mode,
+                context_hint=req.context_hint,
+            )
+        )
+        reviews.append(BatchReviewItem(filename=filename, config_text=config_text, review=review))
+
+    cross_config = None
+    if 2 <= len(extracted) <= 10:
+        findings, inferred_links = correlate_configs([
+            {"config_text": config_text, "vendor": req.vendor, "hostname": None}
+            for filename, config_text in extracted
+        ])
+        cross_config = CrossConfigResponse(
+            findings=findings,
+            inferred_links=inferred_links,
+            summary={
+                "critical": sum(1 for finding in findings if finding.severity.value == "critical"),
+                "warning": sum(1 for finding in findings if finding.severity.value == "warning"),
+                "info": sum(1 for finding in findings if finding.severity.value == "info"),
+                "total": len(findings),
+            },
+        )
+
+    total_findings = sum(item.review.summary.total_findings for item in reviews)
+    critical_total = sum(item.review.summary.critical_count for item in reviews)
+    warning_total = sum(item.review.summary.warning_count for item in reviews)
+    info_total = sum(item.review.summary.info_count for item in reviews)
+    pass_count = sum(1 for item in reviews if item.review.pass_fail)
+
+    return BatchReviewResponse(
+        review_count=len(reviews),
+        filenames=[item.filename for item in reviews],
+        reviews=reviews,
+        cross_config=cross_config,
+        summary={
+            "configs_reviewed": len(reviews),
+            "pass_count": pass_count,
+            "fail_count": len(reviews) - pass_count,
+            "critical": critical_total,
+            "warning": warning_total,
+            "info": info_total,
+            "findings_total": total_findings,
+        },
+    )
 
 
 @router.post("/compare", response_model=CompareResponse)
@@ -357,7 +481,33 @@ async def correlate_multi_config(req: CrossConfigRequest, _=Depends(_verify_key)
 @router.post("/query", response_model=NLQueryResponse)
 async def query_config(req: NLQueryRequest, _=Depends(_verify_key)):
     """Natural language query against a config using Claude API."""
-    vendor_info = detect_vendor(req.config_text) if not req.vendor else VendorDetection(
-        vendor=req.vendor, confidence=1.0
+    detected = detect_vendor(req.config_text)
+    vendor_info = detected if not req.vendor else VendorDetection(
+        vendor=req.vendor,
+        confidence=1.0,
+        hostname=detected.hostname,
+        os_version=detected.os_version,
     )
     return await answer_query(req.config_text, req.question, vendor_info)
+
+
+@router.post("/query/multi", response_model=MultiConfigQueryResponse)
+async def query_multi_config(req: MultiConfigQueryRequest, _=Depends(_verify_key)):
+    """Natural language query across 2-10 configs in the current session."""
+    normalized = []
+    for item in req.configs:
+        detected = detect_vendor(item.config_text)
+        vendor_info = detected if not item.vendor else VendorDetection(
+            vendor=item.vendor,
+            confidence=1.0,
+            hostname=item.hostname or detected.hostname,
+            os_version=detected.os_version,
+        )
+        normalized.append(
+            {
+                "config_text": item.config_text,
+                "hostname": item.hostname or vendor_info.hostname,
+                "vendor_info": vendor_info,
+            }
+        )
+    return await answer_multi_config_query(normalized, req.question)

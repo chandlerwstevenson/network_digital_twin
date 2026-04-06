@@ -187,3 +187,66 @@ def test_query_fallback_returns_answer():
     body = response.json()
     assert "answer" in body
     assert isinstance(body["line_references"], list)
+
+
+def test_multi_query_requires_api_key():
+    response = client.post(
+        "/api/query/multi",
+        json={
+            "configs": [
+                {"config_text": "hostname r1"},
+                {"config_text": "hostname r2"},
+            ],
+            "question": "Which devices have OSPF?",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_multi_query_fallback_returns_matches_across_devices():
+    response = client.post(
+        "/api/query/multi",
+        headers=HEADERS,
+        json={
+            "configs": [
+                {
+                    "config_text": "hostname EDGE-A\nrouter ospf 1\n network 10.0.0.0 0.0.0.3 area 0\ninterface Loopback0\n ip address 1.1.1.1 255.255.255.255"
+                },
+                {
+                    "config_text": "hostname EDGE-B\nrouter bgp 65002\n neighbor 192.0.2.1 remote-as 65001"
+                },
+            ],
+            "question": "Which devices have OSPF area 0 configured?",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "answer" in body
+    assert isinstance(body["matches"], list)
+    assert len(body["matches"]) == 1
+    assert body["matches"][0]["hostname"] == "EDGE-A"
+    assert 2 in body["matches"][0]["line_references"]
+
+
+def test_multi_query_preserves_hostname_when_vendor_is_manually_overridden():
+    response = client.post(
+        "/api/query/multi",
+        headers=HEADERS,
+        json={
+            "configs": [
+                {
+                    "config_text": "hostname EDGE-A\nrouter ospf 1\n network 10.0.0.0 0.0.0.3 area 0",
+                    "vendor": "cisco_ios"
+                },
+                {
+                    "config_text": "hostname EDGE-B\nrouter bgp 65002\n neighbor 192.0.2.1 remote-as 65001",
+                    "vendor": "cisco_ios"
+                },
+            ],
+            "question": "Which devices have OSPF area 0 configured?",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["matches"]) == 1
+    assert body["matches"][0]["hostname"] == "EDGE-A"
