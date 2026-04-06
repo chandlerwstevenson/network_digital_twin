@@ -1,0 +1,568 @@
+================================================================================
+  OPTIMESH CONFIG REVIEW STUDIO — PRODUCT REQUIREMENTS
+  Version 1.0 | Q2 2026 | Confidential
+  Purpose: Define the minimum feature set that delivers immediate, measurable
+           value to network teams in regulated industries and positions
+           Config Studio as the wedge product for Optimesh Risk Intelligence.
+================================================================================
+
+
+1. PRODUCT VISION
+--------------------------------------------------------------------------------
+Config Review Studio must feel like hiring a senior network engineer who has
+memorized every org policy, every vendor quirk, and every compliance framework
+— and who reviews every config in under 30 seconds. The product wins when a
+network engineer uses it before every change window and a QA manager trusts the
+output enough to attach it directly to a change record.
+
+Zero deployment. No credentials. No device access. Paste config, get report.
+
+DESIGN CONSTRAINT — ZERO PRIOR KNOWLEDGE:
+Every feature must deliver full value on a cold start — first paste, first
+session, no account history, no topology file, no device inventory, no golden
+template configured. Features that improve with accumulated data (config
+history, risk trending, device inventory) are permitted ONLY if they degrade
+gracefully to a fully useful single-session experience. No feature may require
+the user to "set up" anything before their first review returns results. The
+tool must never assume it knows anything about the network beyond what is
+present in the config(s) the engineer submits in that session.
+
+
+2. USER PERSONAS
+--------------------------------------------------------------------------------
+P1  Network Engineer (daily user)
+    - Writes/modifies configs multiple times per week
+    - Needs fast, accurate feedback before pushing to production
+    - Cares about: speed, accuracy, actionable remediation, not busywork
+
+P2  Network Team Lead / Architect
+    - Defines and maintains organizational standards (golden templates)
+    - Needs visibility into what deviations are recurring across the team
+    - Cares about: consistency enforcement, template management, team analytics
+
+P3  QA / Compliance Manager (report consumer)
+    - Reviews change documentation for audit readiness
+    - Never touches a CLI — only reads reports
+    - Cares about: structured output, traceability, regulatory mapping
+
+P4  CISO / IT Director (budget holder)
+    - Approves tooling spend; needs risk reduction justification
+    - Cares about: reduced misconfiguration incidents, audit pass rates, ROI
+
+
+3. FUNCTIONAL REQUIREMENTS
+================================================================================
+
+3.1  CONFIG INGESTION
+--------------------------------------------------------------------------------
+REQ-3.1.1  Paste-to-review: user pastes raw config text into a web interface
+           and receives analysis. No file format constraints on input.
+REQ-3.1.2  File upload: accept .txt, .conf, .cfg, .log, and vendor-native
+           export formats. Max file size: 2 MB (covers any single-device config).
+REQ-3.1.3  Batch upload: accept a .zip of multiple config files for bulk
+           review in a single session (Mid-Market and Enterprise tiers).
+REQ-3.1.4  Auto-detect vendor and OS version from config content (e.g.,
+           distinguish IOS 15.x vs. IOS-XE 17.x from the running-config
+           header). Allow manual override when detection is ambiguous.
+REQ-3.1.5  API endpoint (REST) for CI/CD pipeline integration — engineers can
+           trigger a config review as a pre-merge gate in their automation.
+
+3.2  GOLDEN TEMPLATE ENGINE
+--------------------------------------------------------------------------------
+REQ-3.2.1  Template authoring UI: guided interface for defining org-specific
+           rules without requiring the user to write code or regex.
+           Examples of rule types:
+             - Required commands (e.g., "ntp server must be present")
+             - Banned commands (e.g., "no telnet anywhere")
+             - Required values (e.g., "enable secret must use scrypt")
+             - Naming conventions (e.g., interface descriptions must match
+               pattern SITE-ROLE-PORT)
+             - Structural rules (e.g., "every trunk interface must have
+               a storm-control statement")
+           DAY-ONE CONSTRAINT: template authoring is a setup activity. To
+           ensure day-one value, the system must auto-apply a sensible
+           default review (security checks + vendor linting) to every config
+           even if the user has created zero custom templates. Template
+           creation enhances the tool — it must not be a prerequisite.
+REQ-3.2.2  Rule severity levels: Critical, Warning, Informational. Critical
+           findings block a "PASS" report status.
+REQ-3.2.3  Template versioning: every edit creates an immutable version.
+           Reports reference the exact template version used at review time
+           for audit traceability.
+REQ-3.2.4  Template library: ship with curated starter templates for common
+           regulated-industry baselines (CIS Benchmarks for Cisco IOS,
+           DISA STIGs for JunOS, PCI-DSS network segmentation rules).
+REQ-3.2.5  Template inheritance: allow a master org template with per-site or
+           per-role overrides (e.g., WAN edge vs. data center leaf).
+REQ-3.2.6  Template import/export: JSON or YAML format so templates can be
+           version-controlled in Git alongside infrastructure-as-code.
+
+3.3  VENDOR & FIRMWARE-AWARE LINTING
+--------------------------------------------------------------------------------
+REQ-3.3.1  Supported platforms at launch:
+             - Cisco IOS 12.x, 15.x
+             - Cisco IOS-XE 16.x, 17.x
+             - Cisco NX-OS 7.x, 9.x, 10.x
+             - Juniper JunOS (set format and hierarchical/curly-brace format)
+             - Arista EOS 4.x
+             - Palo Alto PAN-OS 10.x, 11.x
+REQ-3.3.2  Syntax validation: catch commands that are valid on one OS version
+           but deprecated/removed on another (e.g., "crypto map" on modern
+           IOS-XE, removed "ip classless" on NX-OS).
+REQ-3.3.3  Semantic analysis: detect misconfigurations that are syntactically
+           valid but operationally dangerous. All checks below operate on
+           the submitted config ONLY — no external topology or device state
+           is required or assumed:
+             - OSPF area inconsistency within a single device (e.g., two
+               interfaces that share a subnet assigned to different areas)
+             - BGP peer-group referenced but not defined in the same config
+             - ACLs defined but never applied to any interface
+             - VLAN referenced in trunk allowed list but not defined in the
+               VLAN database section of the same config
+             - Overlapping or shadowed ACL entries (permit/deny order issues)
+             - Inconsistent duplex/speed across interfaces in the same
+               port-channel or etherchannel bundle
+             - Route-maps, prefix-lists, or community-lists referenced but
+               never defined (dangling references within the config)
+             - Static routes pointing to interfaces that don't exist in the
+               config
+REQ-3.3.4  Security-specific checks. These checks use heuristics derivable
+           from the config itself — they do not require the user to define
+           trust zones or provide topology context:
+             - Plaintext passwords or weak hashing (type 0, type 7)
+             - Management plane exposure: flag SSH, SNMP, or HTTP/HTTPS
+               server enabled on interfaces that carry a default route or
+               have a public IP (RFC 5737/RFC 1918 heuristic). If the tool
+               cannot determine trust level from the config alone, flag as
+               Info-severity with a note: "verify this interface is not
+               exposed to untrusted networks"
+             - Missing control-plane policing (CoPP)
+             - Default community strings (public/private)
+             - Disabled or weak encryption (DES, 3DES, MD5 in IPSec)
+             - Missing AAA configuration (no TACACS+ or RADIUS server)
+             - Auxiliary port enabled with no authentication
+             - HTTP server enabled without HTTPS redirect
+             - Console line with no exec-timeout or unreasonably long timeout
+REQ-3.3.5  Finding output format: each finding must include:
+             - Line number(s) in the original config
+             - Severity (Critical / Warning / Info)
+             - Category (Syntax, Security, Compliance, Best Practice)
+             - Plain-English description of the issue
+             - Remediation: exact replacement config snippet
+             - Reference: link to vendor documentation or compliance clause
+
+3.4  COMPLIANCE-FORMATTED PRE-FLIGHT REPORT
+--------------------------------------------------------------------------------
+REQ-3.4.1  Report output formats: PDF (human-readable) and JSON (machine-
+           readable) generated from the same underlying data.
+REQ-3.4.2  Report header: timestamp (UTC), engineer identity, config hash
+           (SHA-256 of input), template version used, platform detected.
+REQ-3.4.3  Report body sections:
+             a) Executive Summary — pass/fail status, finding counts by
+                severity, risk score (0-100)
+             b) Findings Detail — full finding list per REQ-3.3.5
+             c) Golden Template Compliance — deviation list against the
+                applied template, with pass/fail per rule
+             d) Config Diff (optional) — available only when the user has
+                opted into config retention (REQ-4.3.2) AND a previous
+                version of the same device hostname exists. Shows a
+                contextual diff highlighting new findings introduced by the
+                change. On day-one / first submission for a device, this
+                section is omitted — the report is complete without it.
+REQ-3.4.4  Regulatory mapping: tag each finding with applicable compliance
+           frameworks (GxP, SOX Section 404, PCI-DSS 4.0, HIPAA, NIST
+           800-53) where relevant.
+REQ-3.4.5  Report must be self-contained — readable and meaningful without
+           access to the Config Studio platform (for offline auditor review).
+REQ-3.4.6  Direct export integration: one-click attachment to ServiceNow
+           change records and Jira tickets via API. Webhook support for
+           other ITSM platforms.
+REQ-3.4.7  Report retention: all reports stored for a minimum of 7 years
+           (configurable per org) to satisfy long-term audit requirements.
+
+3.5  USER MANAGEMENT & ACCESS CONTROL
+--------------------------------------------------------------------------------
+REQ-3.5.1  Authentication: email + password signup as the zero-friction
+           default (engineer creates account in under 60 seconds). SSO
+           integration (SAML 2.0 and OIDC — Okta, Azure AD, Ping) available
+           as an org-level upgrade. SSO must never be a prerequisite for
+           first use — an engineer who finds the tool via a link should be
+           able to run their first review before their IT admin configures
+           anything.
+REQ-3.5.2  Role-based access:
+             - Admin: manage templates, users, org settings
+             - Engineer: run reviews, view own reports
+             - Auditor (read-only): view all reports, export, no config input
+REQ-3.5.3  Team/org hierarchy: support multiple teams under one org with
+           isolated template sets and shared org-wide baselines.
+
+3.6  API & INTEGRATIONS
+--------------------------------------------------------------------------------
+REQ-3.6.1  REST API with API key authentication for all core functions:
+           submit config, retrieve report, manage templates.
+REQ-3.6.2  Webhook notifications on review completion (for pipeline gates).
+REQ-3.6.3  CI/CD examples: publish working integration examples for
+           GitHub Actions, GitLab CI, and Jenkins.
+REQ-3.6.4  ServiceNow and Jira Cloud integration (pre-built).
+
+
+3.7  MULTI-DEVICE CROSS-CONFIG CORRELATION
+--------------------------------------------------------------------------------
+A network engineer never deploys a config in isolation. The router on one side
+of a link has a neighbor on the other side. Today, nothing in this spec lets me
+check that two devices actually agree with each other. This is where the most
+dangerous outages come from — each config looks fine alone, but together they
+don't converge.
+
+REQ-3.7.1  Side-by-side multi-config review: allow the user to submit 2–10
+           configs simultaneously and run cross-device consistency checks.
+           The system must detect and flag:
+             - OSPF area ID mismatch between directly connected interfaces
+               (e.g., Router-A has int Gi0/1 in area 0, Router-B has its
+               connected int in area 1 — adjacency will never form)
+             - BGP peer IP mismatches (Router-A peers to 10.1.1.2, but
+               Router-B's loopback is actually 10.1.1.3)
+             - MTU mismatch between connected interfaces (1500 vs. 9216
+               causes silent black-holing of large packets on OSPF)
+             - VLAN allowed-list inconsistency across a trunk (Switch-A
+               allows VLANs 10,20,30 but Switch-B allows 10,20 — VLAN 30
+               traffic silently drops)
+             - Mismatched authentication keys between routing neighbors
+               (same key ID but different key strings = adjacency flap)
+             - Mismatched duplex/speed settings on a point-to-point link
+REQ-3.7.2  Topology inference (session-scoped): from the configs submitted
+           in a single session, infer device-to-device adjacencies using
+           ONLY data present in the configs themselves:
+             - Shared IP subnets between interfaces on different devices
+             - BGP neighbor statements that reference another device's IP
+             - OSPF network statements on a common subnet
+             - Interface descriptions that name a peer device hostname
+           Do NOT rely on CDP/LLDP tables, ARP tables, or routing tables —
+           these are operational state from the device, not config. Display
+           inferred topology as a simple visual map in the report. Mark
+           inferred links as "inferred — verify" to set correct expectations.
+           The topology must be built entirely from the session input with
+           zero prior knowledge of the network.
+REQ-3.7.3  Cross-vendor correlation: these checks must work across vendor
+           boundaries. A Cisco IOS router peering OSPF with a JunOS router
+           is a completely normal deployment. The tool must normalize
+           vendor-specific syntax into a common model before running
+           cross-checks (e.g., JunOS "protocols ospf area 0.0.0.0" maps
+           to IOS "router ospf 1 / network x.x.x.x area 0").
+
+3.8  CONFIG SNIPPET MODE
+--------------------------------------------------------------------------------
+Engineers don't always have a full running-config to paste. Half the time I'm
+writing a 15-line interface block or a BGP neighbor stanza and I want a quick
+sanity check before I paste it into the device. The current spec assumes
+full-config input, which means snippet users will get flooded with false
+positives about "missing" global commands like AAA or NTP.
+
+REQ-3.8.1  Snippet-aware analysis: detect when the input is a partial config
+           (heuristic: no "version" header, under 50 lines, starts mid-
+           hierarchy like "interface" or "router bgp"). When snippet mode is
+           active, suppress findings that require global config context
+           (e.g., don't flag "missing AAA" on a 10-line interface block).
+REQ-3.8.2  Context hint: allow the user to optionally specify what section
+           of the config the snippet belongs to (e.g., "this is an interface
+           config" or "this is a BGP neighbor stanza") so the linter can
+           apply the correct subset of golden template rules.
+REQ-3.8.3  Auto-complete context: for known snippet types, the tool should
+           show what related config would be needed for the snippet to work.
+           Example: if I paste a BGP neighbor block referencing route-map
+           "RM-PEER-IN", the tool should note "this config references
+           route-map RM-PEER-IN — ensure it is defined in your full config"
+           rather than just flagging it as missing.
+
+3.9  ROLLBACK & SAFE-APPLY CONFIG GENERATION
+--------------------------------------------------------------------------------
+Telling me what's wrong is useful. Telling me how to fix it is better. But what
+I really need at 2am during a maintenance window is: (a) exact commands to fix
+it, and (b) exact commands to undo those fixes if something breaks.
+
+REQ-3.9.1  Terminal-ready remediation: every remediation snippet must include
+           the full command-mode context needed to paste directly into a
+           terminal session. For Cisco IOS, this means starting from
+           "configure terminal" and including the correct hierarchy
+           (e.g., "interface GigabitEthernet0/1" before the interface-level
+           fix). For JunOS, provide both "set" commands and "edit" stanza
+           format. Engineers should be able to copy the entire block and
+           paste — no manual assembly required.
+REQ-3.9.2  Rollback snippet: for every remediation, generate a corresponding
+           rollback command block that undoes the change. For IOS, this is
+           typically the "no" form of each command. For JunOS, the "delete"
+           equivalent. The rollback should be presented alongside the fix
+           in a clearly labeled section so the engineer can save it before
+           applying the change.
+REQ-3.9.3  Ordered change script: when a review produces multiple findings,
+           generate a consolidated change script that applies all fixes in
+           the correct order (e.g., create the route-map before referencing
+           it in BGP, create the VLAN before assigning it to an interface).
+           Include a matching ordered rollback script in reverse dependency
+           order.
+
+3.10 CHANGE WINDOW / QUICK-PASS MODE
+--------------------------------------------------------------------------------
+During a maintenance window I have 15 minutes and four devices to check. I do
+not need a 12-page report. I need a red/green signal on the critical stuff.
+
+REQ-3.10.1 Quick-pass mode: a one-toggle review mode that returns only
+           Critical-severity findings. Suppress all Warning and Info findings.
+           The output should fit on a single screen — hostname, platform,
+           pass/fail, and a numbered list of critical issues (max 5 lines
+           each). No PDF generation, no compliance mapping, no exec summary.
+           Goal: answer "is this config safe to push?" in under 10 seconds.
+REQ-3.10.2 Configurable severity filter: beyond quick-pass, allow the user
+           to set a persistent severity threshold per session (e.g., "show
+           me Critical + Warning, hide Info"). The full data is still
+           captured for the report, but the UI only surfaces what I care
+           about right now.
+REQ-3.10.3 Dark mode: engineers work in terminals. The review UI must have a
+           dark theme option that doesn't blast a white screen at 2am.
+
+3.11 CONFIG HISTORY & PER-DEVICE VERSIONING
+--------------------------------------------------------------------------------
+I want to see how a device's config has evolved over time without needing RANCID
+or Oxidized running on the network. Every time I paste a config for the same
+hostname, that should build a timeline.
+
+PROGRESSIVE VALUE NOTE: this entire section is an opt-in retention feature.
+It requires REQ-4.3.2 retention opt-in. The tool must deliver a complete,
+useful review on the very first config submitted for any device, with zero
+history. History features activate automatically once a second config for the
+same hostname is submitted — no setup step required.
+
+REQ-3.11.1 Device identity matching: automatically extract the hostname from
+           submitted configs and link reviews to a logical device record.
+           Allow manual hostname assignment when auto-detection fails.
+REQ-3.11.2 Config version timeline: for each device, show a chronological
+           list of all submitted configs with timestamps, submitting
+           engineer, and pass/fail status. Clicking any two entries shows a
+           contextual diff — not a raw text diff, but a structured diff that
+           highlights which sections changed and whether new findings were
+           introduced or resolved.
+REQ-3.11.3 Drift detection alerts: requires config retention opt-in AND at
+           least two submissions for the same device hostname. Alerts when
+           a device's latest config deviates from its last-known-good config
+           (the most recent config that received a PASS report) by more than
+           a configurable threshold (e.g., >20 lines changed). The baseline
+           is established organically from the user's own submissions — the
+           tool never assumes a "correct" state it hasn't been shown. On
+           first submission for any device, no drift alert is possible and
+           none is generated.
+REQ-3.11.4 Running vs. startup comparison: accept both a running-config and
+           a startup-config for the same device and highlight differences.
+           Any command in running but not in startup means "this will be lost
+           on reload" — flag it with a Critical severity. This is the single
+           most common cause of "it worked until we rebooted" outages.
+
+3.12 NATURAL LANGUAGE CONFIG QUERY
+--------------------------------------------------------------------------------
+Grepping through a 4,000-line config is slow and error-prone. I should be able
+to ask questions about a config in plain English and get precise answers with
+line references.
+
+REQ-3.12.1 Query interface: after a config is submitted, provide a chat-style
+           query bar where the engineer can ask questions about the config.
+           Examples:
+             - "Which interfaces have no inbound ACL?"
+             - "List all BGP neighbors and their remote-AS numbers"
+             - "Show me every reference to VLAN 100"
+             - "What is the OSPF cost on interface Gi0/0/1?"
+             - "Are there any static routes pointing to 10.0.0.0/8?"
+           Responses must include exact line numbers so the engineer can
+           cross-reference the original config.
+REQ-3.12.2 Query across multiple configs: if multiple configs are submitted
+           (per REQ-3.7.1), allow queries that span devices. Example:
+           "Which devices have OSPF area 0 configured?" should return a
+           list of hostnames with the relevant line numbers from each config.
+REQ-3.12.3 Query history: persist the last 20 queries per session so the
+           engineer can refine and re-run queries without retyping.
+
+3.13 PEER REVIEW WORKFLOW
+--------------------------------------------------------------------------------
+Config changes in regulated environments typically require a second set of eyes.
+Today this happens over Slack or email with zero structure. The tool should
+formalize this.
+
+REQ-3.13.1 Review request: an engineer can flag a completed review for peer
+           approval. This generates a shareable link (authenticated, time-
+           limited) containing the submitted config, the full report, and a
+           comment thread.
+REQ-3.13.2 Inline commenting: the reviewer can attach comments to specific
+           line numbers in the config (like a code review in GitHub). The
+           original engineer receives a notification and can respond.
+REQ-3.13.3 Approval gate: the reviewer marks the config as "Approved" or
+           "Changes Requested." Approval status is recorded in the final
+           report and included in the compliance audit trail. For orgs that
+           require dual sign-off, support configurable approval count
+           thresholds (e.g., 2 approvals required for Critical-severity
+           findings).
+REQ-3.13.4 Integration with change management: the peer review status
+           (approved/pending/rejected) should be pushed to ServiceNow or
+           Jira alongside the report, so the change manager sees one
+           consolidated artifact instead of chasing separate approvals.
+
+3.14 CUSTOM CHECK SCRIPTING (POWER USER)
+--------------------------------------------------------------------------------
+Every network has weird edge cases that no template engine will cover. Our org
+has a rule that every interface description on a WAN link must contain the
+circuit ID from the carrier. Another org requires that all loopback IPs come
+from a specific /24 block. These are too niche for built-in rules but too
+important to skip.
+
+REQ-3.14.1 Lightweight scripting DSL: provide a simple, declarative language
+           (not full Python — that's a security nightmare in SaaS) for
+           defining custom checks. The DSL must support:
+             - Pattern matching on config sections (e.g., "for each interface
+               where description contains 'WAN'")
+             - Value extraction and comparison (e.g., "ip address must be
+               within 10.200.0.0/16")
+             - Cross-section references (e.g., "every route-map referenced
+               in a BGP neighbor must be defined under route-map")
+             - Boolean logic for compound rules (e.g., "if interface is
+               type trunk AND native-vlan != 999, flag as Warning")
+REQ-3.14.2 Test sandbox: allow the user to paste a sample config and run
+           their custom check against it to verify it works before adding
+           it to the org template. Show exactly which lines matched, which
+           passed, which failed.
+REQ-3.14.3 Community check library: allow users to publish (anonymized)
+           custom checks to a shared community library. Other users can
+           browse, preview, and import checks. This creates a network
+           effect — each customer's edge cases improve the platform for
+           everyone.
+
+
+4. NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+4.1  PERFORMANCE
+--------------------------------------------------------------------------------
+REQ-4.1.1  Single config review completes in < 30 seconds for configs up to
+           10,000 lines.
+REQ-4.1.2  Batch review of 50 configs completes in < 10 minutes.
+REQ-4.1.3  Web UI initial page load < 2 seconds (P95).
+
+4.2  AVAILABILITY & RELIABILITY
+--------------------------------------------------------------------------------
+REQ-4.2.1  99.9% monthly uptime SLA (Enterprise tier: 99.95%).
+REQ-4.2.2  Multi-region deployment (US, EU) to satisfy data residency.
+REQ-4.2.3  Graceful degradation: if LLM backend is unavailable, deterministic
+           rule-based checks (syntax, golden template) must still execute.
+
+4.3  SECURITY & DATA HANDLING
+--------------------------------------------------------------------------------
+REQ-4.3.1  All config data encrypted in transit (TLS 1.3) and at rest
+           (AES-256).
+REQ-4.3.2  Config data is ephemeral by default — deleted after report
+           generation unless the user opts in to retention.
+REQ-4.3.3  Zero-retention LLM processing: config data sent to the LLM is
+           not used for model training and is not stored beyond the request.
+           This must be contractually guaranteed and clearly documented.
+REQ-4.3.4  SOC 2 Type II audit initiated by end of Q4 2026.
+REQ-4.3.5  Config sanitization: auto-redact passwords, keys, and secrets
+           from stored reports and logs.
+REQ-4.3.6  Tenant isolation: strict logical separation of all customer data
+           — no cross-tenant data leakage under any circumstance.
+
+4.4  SCALABILITY
+--------------------------------------------------------------------------------
+REQ-4.4.1  Architecture must support 10,000+ reviews/day without
+           re-architecture.
+REQ-4.4.2  Horizontal scaling of review workers behind a queue.
+
+
+5. WEDGE-TO-PLATFORM REQUIREMENTS
+================================================================================
+These requirements ensure Config Studio collects the signal needed to upsell
+Optimesh Risk Intelligence and creates natural expansion paths.
+
+REQ-5.1    Environment fingerprinting: with user consent, aggregate anonymized
+           metadata from reviewed configs (vendor mix, OS versions, common
+           misconfig patterns) to build a per-customer environment profile.
+REQ-5.2    Risk score trending: track an org's risk score over time across
+           reviews. Surface trends in a dashboard (e.g., "your security
+           findings decreased 40% over 90 days").
+           DAY-ONE FALLBACK: on the first review, display the risk score as
+           a single-point benchmark with industry context (e.g., "Risk score:
+           72 — typical for mid-market pharma networks"). Trending charts
+           appear automatically after the third review. The dashboard is
+           never empty — first visit shows the latest score + actionable
+           top-3 findings, not a "no data yet" placeholder.
+REQ-5.3    "What if" prompts: after a review, surface targeted prompts like
+           "This config has 12 OSPF adjacencies — want to see how a link
+           failure would affect convergence?" These prompts tease Risk
+           Intelligence capabilities without requiring a separate sale.
+REQ-5.4    Device inventory seed: as configs are reviewed, build a lightweight
+           device inventory (hostname, vendor, OS, management IP if present)
+           that becomes the starting point for Risk Intelligence onboarding
+           — reducing deployment friction for the upsell.
+REQ-5.5    Usage analytics for sales: track review frequency, user count,
+           and template adoption per account to identify expansion-ready
+           customers (product-qualified leads).
+
+
+6. LAUNCH CRITERIA (MVP — Q3 2026)
+================================================================================
+The MVP must deliver enough value that a 3-person network team at a mid-market
+pharma company would pay $2,500/month after a 14-day free trial.
+
+MVP includes:
+  [x] Paste-to-review for Cisco IOS/IOS-XE and JunOS (REQ-3.1.1, 3.1.4)
+  [x] Golden Template Engine with guided rule authoring (REQ-3.2.1–3.2.3)
+  [x] 3 starter templates: CIS Cisco IOS, DISA STIG JunOS, PCI-DSS (REQ-3.2.4)
+  [x] Vendor-aware linting for Cisco IOS, IOS-XE, JunOS (REQ-3.3.1–3.3.4)
+  [x] PDF pre-flight report with compliance tagging (REQ-3.4.1–3.4.5)
+  [x] Email/password signup with sub-60-second onboarding (REQ-3.5.1)
+  [x] SSO via OIDC as optional org upgrade (REQ-3.5.1)
+  [x] REST API with key auth (REQ-3.6.1)
+  [x] < 30-second review time (REQ-4.1.1)
+  [x] Ephemeral config handling with zero-retention LLM (REQ-4.3.2–4.3.3)
+  [x] Risk score with industry benchmark on first review, trending after
+      third review (REQ-5.2)
+
+MVP should also include:
+  [x] Config snippet mode with context hints (REQ-3.8.1–3.8.3)
+  [x] Terminal-ready remediation with rollback snippets (REQ-3.9.1–3.9.2)
+  [x] Quick-pass mode + dark mode (REQ-3.10.1, 3.10.3)
+  [x] Running vs. startup config comparison (REQ-3.11.4)
+  [x] Natural language config query (REQ-3.12.1)
+
+  Rationale: snippet mode, rollback generation, and quick-pass are daily-driver
+  features. Without them, engineers will use the tool once and abandon it because
+  it doesn't fit their real workflow. These are what separate "I use this every
+  change window" from "I demoed this once."
+
+Deferred to v1.1:
+  [ ] Batch upload (REQ-3.1.3)
+  [ ] NX-OS, Arista EOS, Palo Alto PAN-OS support (REQ-3.3.1)
+  [ ] ServiceNow/Jira integration (REQ-3.6.4)
+  [ ] Template inheritance (REQ-3.2.5)
+  [ ] Multi-region EU deployment (REQ-4.2.2)
+  [ ] "What if" Risk Intelligence prompts (REQ-5.3)
+  [ ] Multi-device cross-config correlation (REQ-3.7.1–3.7.3)
+  [ ] Peer review workflow (REQ-3.13.1–3.13.4)
+  [ ] Custom check scripting DSL (REQ-3.14.1–3.14.3)
+  [ ] Config history & drift detection (REQ-3.11.1–3.11.3)
+  [ ] Cross-config natural language query (REQ-3.12.2)
+  [ ] Ordered change scripts (REQ-3.9.3)
+  [ ] Community check library (REQ-3.14.3)
+
+
+7. SUCCESS METRICS
+================================================================================
+Metric                          Target (12 months post-launch)
+-----------------------------------------------------------
+Paying accounts                 50+
+Monthly active engineers        500+
+Reviews per month               10,000+
+Net Revenue Retention            > 120% (expansion via tier upgrades)
+Trial-to-paid conversion         > 25%
+Risk Intelligence upsell rate    > 15% of Config Studio accounts
+Mean time to first review        < 5 minutes from signup
+NPS                              > 50
+
+
+================================================================================
+END OF REQUIREMENTS
+================================================================================

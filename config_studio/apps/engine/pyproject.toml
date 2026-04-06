@@ -1,0 +1,9 @@
+[project]
+name = "config-studio-engine"
+version = "0.1.0"
+description = "Optimesh Config Review Studio - Analysis Engine"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,81 @@
+{
+  "name": "PCI-DSS 4.0 — Network Segmentation",
+  "description": "Payment Card Industry Data Security Standard v4.0 network segmentation and access control requirements for devices in cardholder data environments.",
+  "is_starter": true,
+  "rules": [
+    {
+      "name": "No default credentials",
+      "description": "PCI-DSS 2.1: Default passwords and community strings must be changed before deployment",
+      "rule_type": "banned_command",
+      "severity": "critical",
+      "pattern": "(community (public|private)|password cisco|password admin|password default)"
+    },
+    {
+      "name": "Encrypted management access",
+      "description": "PCI-DSS 4.1: All management access must use strong cryptography (no telnet, no HTTP without TLS)",
+      "rule_type": "banned_command",
+      "severity": "critical",
+      "pattern": "transport input telnet$"
+    },
+    {
+      "name": "No weak encryption in VPN",
+      "description": "PCI-DSS 4.1: VPN configurations must not use DES, 3DES, or MD5",
+      "rule_type": "banned_command",
+      "severity": "critical",
+      "pattern": "crypto.*(des |3des|md5)"
+    },
+    {
+      "name": "ACLs on all external interfaces",
+      "description": "PCI-DSS 1.3: Access control lists must be applied on interfaces facing untrusted networks",
+      "rule_type": "structural",
+      "severity": "warning",
+      "section": "interface",
+      "condition": "description.*(WAN|external|untrust|internet|public|DMZ)",
+      "pattern": "ip access-group"
+    },
+    {
+      "name": "Logging to remote server",
+      "description": "PCI-DSS 10.2: Audit logging must be sent to a centralized log server",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "logging (host |\\d+\\.\\d+)"
+    },
+    {
+      "name": "NTP for accurate timestamps",
+      "description": "PCI-DSS 10.4: Time synchronization must be configured for accurate audit trails",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "ntp server"
+    },
+    {
+      "name": "AAA authentication",
+      "description": "PCI-DSS 8.1: Individual user authentication must be enforced via AAA",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "aaa (new-model|authentication)"
+    },
+    {
+      "name": "SSH version 2 only",
+      "description": "PCI-DSS 4.1: Only SSHv2 connections are permitted for management access",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "ip ssh version 2"
+    },
+    {
+      "name": "HTTPS only for web management",
+      "description": "PCI-DSS 4.1: If web management is enabled, it must use HTTPS only",
+      "rule_type": "banned_command",
+      "severity": "warning",
+      "pattern": "^ip http server$"
+    },
+    {
+      "name": "No unused interfaces active",
+      "description": "PCI-DSS 1.1.6: Unused interfaces should be administratively shut down",
+      "rule_type": "structural",
+      "severity": "info",
+      "section": "interface",
+      "condition": "no ip address",
+      "pattern": "shutdown"
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "name": "CIS Benchmark — Cisco IOS",
+  "description": "Center for Internet Security (CIS) Benchmark for Cisco IOS. Covers authentication, access control, logging, and hardening best practices.",
+  "is_starter": true,
+  "rules": [
+    {
+      "name": "Enable secret required",
+      "description": "An enable secret must be configured using scrypt or SHA-256 hashing",
+      "rule_type": "required_command",
+      "severity": "critical",
+      "pattern": "enable secret"
+    },
+    {
+      "name": "No enable password",
+      "description": "The weak 'enable password' command must not be used — use 'enable secret' instead",
+      "rule_type": "banned_command",
+      "severity": "critical",
+      "pattern": "^enable password"
+    },
+    {
+      "name": "Service password encryption",
+      "description": "Password encryption service must be enabled to prevent plaintext password display",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "service password-encryption"
+    },
+    {
+      "name": "AAA new-model",
+      "description": "AAA authentication must be enabled for centralized access control",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "aaa new-model"
+    },
+    {
+      "name": "No telnet on VTY lines",
+      "description": "Telnet must be disabled on all VTY lines — SSH only",
+      "rule_type": "banned_command",
+      "severity": "warning",
+      "pattern": "transport input telnet"
+    },
+    {
+      "name": "NTP server configured",
+      "description": "At least one NTP server must be configured for accurate timestamps",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "ntp server"
+    },
+    {
+      "name": "Logging enabled",
+      "description": "Syslog logging must be configured to a remote server",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "logging (host |\\d+\\.\\d+)"
+    },
+    {
+      "name": "Service timestamps",
+      "description": "Timestamps must be enabled on log and debug messages",
+      "rule_type": "required_command",
+      "severity": "info",
+      "pattern": "service timestamps (log|debug)"
+    },
+    {
+      "name": "No IP source routing",
+      "description": "IP source routing must be disabled to prevent route injection attacks",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "no ip source-route"
+    },
+    {
+      "name": "Banner login",
+      "description": "A login banner must be configured for legal notice",
+      "rule_type": "required_command",
+      "severity": "info",
+      "pattern": "banner (login|motd)"
+    },
+    {
+      "name": "No SNMP default communities",
+      "description": "Default SNMP community strings 'public' and 'private' must not be used",
+      "rule_type": "banned_command",
+      "severity": "critical",
+      "pattern": "snmp-server community (public|private)"
+    },
+    {
+      "name": "SSH version 2",
+      "description": "SSH version 2 must be explicitly configured (SSHv1 has known vulnerabilities)",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "ip ssh version 2"
+    },
+    {
+      "name": "Trunk interfaces must have storm-control",
+      "description": "Every trunk interface must have storm-control configured to prevent broadcast storms",
+      "rule_type": "structural",
+      "severity": "warning",
+      "section": "interface",
+      "condition": "switchport mode trunk",
+      "pattern": "storm-control"
+    },
+    {
+      "name": "VTY access-class required",
+      "description": "VTY lines must have an access-class applied to restrict management access",
+      "rule_type": "structural",
+      "severity": "warning",
+      "section": "line vty",
+      "pattern": "access-class"
+    }
+  ]
+}

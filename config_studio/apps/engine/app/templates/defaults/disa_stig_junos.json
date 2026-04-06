@@ -1,0 +1,77 @@
+{
+  "name": "DISA STIG — Juniper JunOS",
+  "description": "Defense Information Systems Agency (DISA) Security Technical Implementation Guide for Juniper JunOS devices.",
+  "is_starter": true,
+  "rules": [
+    {
+      "name": "Root authentication required",
+      "description": "Root authentication must be configured with an encrypted password",
+      "rule_type": "required_command",
+      "severity": "critical",
+      "pattern": "(root-authentication encrypted-password|root-authentication ssh)"
+    },
+    {
+      "name": "No plaintext passwords",
+      "description": "Plaintext passwords must not appear in the configuration",
+      "rule_type": "banned_command",
+      "severity": "critical",
+      "pattern": "plain-text-password"
+    },
+    {
+      "name": "SSH service enabled",
+      "description": "SSH must be configured as the management access protocol",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "(services ssh|system services ssh)"
+    },
+    {
+      "name": "No telnet service",
+      "description": "Telnet service must be disabled — cleartext management protocol",
+      "rule_type": "banned_command",
+      "severity": "warning",
+      "pattern": "services telnet"
+    },
+    {
+      "name": "System logging configured",
+      "description": "System logging (syslog) must be configured to a remote host",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "(syslog host|system syslog)"
+    },
+    {
+      "name": "NTP configured",
+      "description": "NTP must be configured for accurate time synchronization",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "(ntp server|system ntp)"
+    },
+    {
+      "name": "Login message configured",
+      "description": "A login message/banner must be configured for legal notice",
+      "rule_type": "required_command",
+      "severity": "info",
+      "pattern": "(login message|system login message)"
+    },
+    {
+      "name": "SNMP community not default",
+      "description": "Default SNMP community strings must not be used",
+      "rule_type": "banned_command",
+      "severity": "critical",
+      "pattern": "community (public|private)"
+    },
+    {
+      "name": "Firewall filter on loopback",
+      "description": "A firewall filter should protect the routing engine (lo0 interface)",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "(lo0.*filter|filter.*lo0|protect-RE)"
+    },
+    {
+      "name": "TACACS+ or RADIUS configured",
+      "description": "Centralized authentication via TACACS+ or RADIUS must be configured",
+      "rule_type": "required_command",
+      "severity": "warning",
+      "pattern": "(tacplus|radius)"
+    }
+  ]
+}

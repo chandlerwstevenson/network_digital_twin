@@ -1,0 +1,23 @@
+{
+  "name": "config-studio",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:engine": "cd apps/engine && python3 -m uvicorn app.main:app --reload --port 8000",
+    "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:engine\"",
+    "dev:desktop": "npm run build:web && cd apps/desktop && npx electron .",
+    "build:web": "cd apps/web && npm run build",
+    "build:desktop": "npm run build:web && cp -r apps/web/out apps/desktop/renderer && cd apps/desktop && npm run build"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "concurrently": "^8.2.0"
+  }
+}
