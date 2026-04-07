@@ -14,29 +14,25 @@ For each work pass:
 
 ## Current priority order
 
-### 1. Reporting flow
+### 1. Validation depth for live engine flows
 Requirements:
-- REQ-3.4.1 JSON + PDF output from same underlying data
-- REQ-3.4.2 report header
-- REQ-3.4.3 report body sections
-- REQ-3.4.5 self-contained report
+- REQ-3.1.5 API endpoint for CI/CD integration
+- REQ-3.4.6 direct export integration
+- REQ-3.6.2 webhook notifications
+- REQ-3.6.4 ServiceNow and Jira Cloud integration
 
-Target:
-- add a real report model in the engine
-- produce downloadable JSON report artifact from analyzed config
-- shape output for QA/compliance readability, not just raw API data
+Status update (2026-04-07):
+- real FastAPI/Pydantic/Pytest runtime is now working locally under Python 3.13 in repo venv `.venv313`
+- endpoint smoke suite currently passes (`20 passed`)
+- export endpoint coverage exists for Jira and ServiceNow mocked attachment/comment flows
+- one real parser gap was fixed: Cisco fallback vendor detection now recognizes hostname/security-oriented snippets well enough to avoid silently skipping IOS security linting
 
-### 2. Template flow
-Requirements:
-- REQ-3.2.1 guided template usage with day-one default review
-- REQ-3.2.3 template versioning
-- REQ-3.2.4 starter templates
+Next target:
+- expand abuse/edge-case coverage for `/api/pipeline/review`, `/api/batch-review`, and `/api/export/review`
+- verify multipart attachment behavior against realistic mocked responses
+- add negative tests for auth/input validation and partial export failures
 
-Target:
-- load starter templates from engine defaults instead of hardcoded frontend copies
-- show applied template in UI/report
-
-### 3. Findings quality
+### 2. Findings quality
 Requirements:
 - REQ-3.3.3 semantic analysis
 - REQ-3.3.4 security checks
@@ -47,6 +43,16 @@ Target:
 - reduce false positives
 - strengthen JunOS coverage
 - ensure findings consistently include useful remediation/rollback/context
+
+### 3. ITSM UX in the web app
+Requirements:
+- REQ-3.4.6 direct export integration
+- REQ-3.6.4 ServiceNow and Jira Cloud integration
+
+Target:
+- add one-click export actions in `apps/web`
+- capture Jira/ServiceNow destination details without forcing manual JSON editing
+- surface attachment/export status clearly for change-window workflows
 
 ### 4. Persistence
 Requirements:

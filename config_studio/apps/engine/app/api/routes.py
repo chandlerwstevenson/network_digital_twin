@@ -6,6 +6,7 @@ import base64
 import hashlib
 import io
 import json
+import mimetypes
 import urllib.error
 import urllib.request
 import uuid
@@ -32,6 +33,8 @@ from app.api.schemas import (
     MultiConfigQueryResponse,
     PipelineReviewRequest,
     PipelineReviewResponse,
+    ReviewExportRequest,
+    ReviewExportResponse,
     VendorDetection,
     ReviewStatus,
     SnippetInfo,
@@ -234,17 +237,29 @@ def _extract_batch_zip(req: BatchReviewRequest) -> list[tuple[str, str]]:
     return extracted
 
 
-def _send_review_webhook(webhook_url: str, payload: dict, headers: dict[str, str] | None = None) -> dict[str, str | bool | int | None]:
-    body = json.dumps(payload).encode("utf-8")
-    request_headers = {"Content-Type": "application/json", **(headers or {})}
-    request = urllib.request.Request(webhook_url, data=body, headers=request_headers, method="POST")
+def _build_auth_headers(auth) -> dict[str, str]:
+    if auth.auth_type.value == "basic":
+        if not auth.username or auth.password is None:
+            raise HTTPException(status_code=400, detail="Basic auth requires username and password.")
+        token = base64.b64encode(f"{auth.username}:{auth.password}".encode("utf-8")).decode("ascii")
+        return {"Authorization": f"Basic {token}"}
+
+    if not auth.token:
+        raise HTTPException(status_code=400, detail="Bearer auth requires token.")
+    return {"Authorization": f"Bearer {auth.token}"}
+
+
+def _http_request_json(url: str, method: str, payload: dict | None, headers: dict[str, str]) -> dict[str, str | bool | int | None]:
+    body = json.dumps(payload).encode("utf-8") if payload is not None else None
+    request_headers = {"Content-Type": "application/json", **headers}
+    request = urllib.request.Request(url, data=body, headers=request_headers, method=method)
     try:
-        with urllib.request.urlopen(request, timeout=10) as response:
+        with urllib.request.urlopen(request, timeout=20) as response:
             return {
                 "attempted": True,
                 "delivered": 200 <= response.status < 300,
                 "status_code": response.status,
-                "detail": "Webhook delivered.",
+                "detail": response.read().decode("utf-8", errors="replace")[:500] or f"{method} {url} succeeded.",
             }
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:500]
@@ -252,7 +267,7 @@ def _send_review_webhook(webhook_url: str, payload: dict, headers: dict[str, str
             "attempted": True,
             "delivered": False,
             "status_code": exc.code,
-            "detail": detail or f"Webhook returned HTTP {exc.code}.",
+            "detail": detail or f"{method} {url} returned HTTP {exc.code}.",
         }
     except Exception as exc:  # pragma: no cover
         return {
@@ -261,6 +276,218 @@ def _send_review_webhook(webhook_url: str, payload: dict, headers: dict[str, str
             "status_code": None,
             "detail": str(exc),
         }
+
+
+def _encode_multipart(parts: list[dict[str, str | bytes]]) -> tuple[bytes, str]:
+    boundary = f"----ConfigStudioBoundary{uuid.uuid4().hex}"
+    body = bytearray()
+    for part in parts:
+        body.extend(f"--{boundary}\r\n".encode("utf-8"))
+        disposition = f'Content-Disposition: form-data; name="{part["name"]}"'
+        filename = part.get("filename")
+        if filename:
+            disposition += f'; filename="{filename}"'
+        body.extend(f"{disposition}\r\n".encode("utf-8"))
+        content_type = part.get("content_type")
+        if content_type:
+            body.extend(f"Content-Type: {content_type}\r\n".encode("utf-8"))
+        body.extend(b"\r\n")
+        data = part.get("data", "")
+        body.extend(data if isinstance(data, bytes) else str(data).encode("utf-8"))
+        body.extend(b"\r\n")
+    body.extend(f"--{boundary}--\r\n".encode("utf-8"))
+    return bytes(body), boundary
+
+
+def _http_request_multipart(url: str, method: str, parts: list[dict[str, str | bytes]], headers: dict[str, str]) -> dict[str, str | bool | int | None]:
+    body, boundary = _encode_multipart(parts)
+    request_headers = {"Content-Type": f"multipart/form-data; boundary={boundary}", **headers}
+    request = urllib.request.Request(url, data=body, headers=request_headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return {
+                "attempted": True,
+                "delivered": 200 <= response.status < 300,
+                "status_code": response.status,
+                "detail": response.read().decode("utf-8", errors="replace")[:500] or f"{method} {url} succeeded.",
+            }
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        return {
+            "attempted": True,
+            "delivered": False,
+            "status_code": exc.code,
+            "detail": detail or f"{method} {url} returned HTTP {exc.code}.",
+        }
+    except Exception as exc:  # pragma: no cover
+        return {
+            "attempted": True,
+            "delivered": False,
+            "status_code": None,
+            "detail": str(exc),
+        }
+
+
+def _send_review_webhook(webhook_url: str, payload: dict, headers: dict[str, str] | None = None) -> dict[str, str | bool | int | None]:
+    return _http_request_json(webhook_url, "POST", payload, headers or {})
+
+
+def _render_export_artifacts(review, attachment_prefix: str, include_pdf: bool, include_json: bool, include_html: bool) -> list[dict[str, str | bytes | int]]:
+    artifacts: list[dict[str, str | bytes | int]] = []
+    safe_prefix = attachment_prefix.strip() or "config-studio-review"
+    if include_json:
+        artifacts.append(
+            {
+                "filename": f"{safe_prefix}-{review.review_id}.json",
+                "content_type": "application/json",
+                "data": json.dumps(review.report.model_dump(), indent=2).encode("utf-8"),
+            }
+        )
+    if include_html:
+        artifacts.append(
+            {
+                "filename": f"{safe_prefix}-{review.review_id}.html",
+                "content_type": "text/html",
+                "data": build_report_html(review).encode("utf-8"),
+            }
+        )
+    if include_pdf:
+        artifacts.append(
+            {
+                "filename": f"{safe_prefix}-{review.review_id}.pdf",
+                "content_type": "application/pdf",
+                "data": render_report_pdf_bytes(review),
+            }
+        )
+    return artifacts
+
+
+def _build_export_summary_text(review, export_comment: str | None = None) -> str:
+    summary = review.report.body.executive_summary
+    lines = [
+        "Config Studio review export",
+        f"Review ID: {review.review_id}",
+        f"Hostname: {review.report.header.hostname or 'unknown'}",
+        f"Platform: {review.report.header.platform_detected}",
+        f"Status: {summary.pass_fail_label}",
+        f"Risk score: {summary.risk_score} ({summary.risk_grade})",
+        f"Findings: critical {summary.finding_counts.get('critical', 0)}, warning {summary.finding_counts.get('warning', 0)}, info {summary.finding_counts.get('info', 0)}, total {summary.finding_counts.get('total', 0)}",
+        f"Config hash: {review.config_hash}",
+    ]
+    if export_comment:
+        lines.extend(["", export_comment.strip()])
+    return "\n".join(lines)
+
+
+def _export_review_to_servicenow(req: ReviewExportRequest, review) -> tuple[list[dict[str, str | int]], dict[str, str | bool | int | None], dict[str, str]]:
+    if not req.service_now:
+        raise HTTPException(status_code=400, detail="service_now options are required for ServiceNow export.")
+
+    headers = {"Accept": "application/json", **_build_auth_headers(req.auth)}
+    instance = req.service_now.instance_url.rstrip("/")
+    artifacts = _render_export_artifacts(review, req.attachment_prefix, req.include_pdf, req.include_json, req.include_html)
+    attachment_results: list[dict[str, str | int]] = []
+    for artifact in artifacts:
+        url = (
+            f"{instance}/api/now/attachment/file?table_name={req.service_now.table_name}"
+            f"&table_sys_id={req.service_now.record_sys_id}&file_name={artifact['filename']}"
+        )
+        result = _http_request_multipart(
+            url,
+            "POST",
+            [{
+                "name": "file",
+                "filename": str(artifact["filename"]),
+                "content_type": str(artifact["content_type"]),
+                "data": artifact["data"],
+            }],
+            headers,
+        )
+        attachment_results.append(
+            {
+                "filename": str(artifact["filename"]),
+                "content_type": str(artifact["content_type"]),
+                "bytes": len(artifact["data"]),
+                "status_code": int(result.get("status_code") or 0),
+            }
+        )
+
+    comment_result = {"attempted": False, "delivered": False, "status_code": None, "detail": None}
+    if req.service_now.update_work_notes or req.service_now.update_short_description:
+        payload: dict[str, str] = {}
+        if req.service_now.update_work_notes:
+            payload["work_notes"] = _build_export_summary_text(review, req.export_comment)
+        if req.service_now.update_short_description:
+            payload["short_description"] = f"Config Studio {review.report.body.executive_summary.pass_fail_label}: {review.report.header.hostname or 'Unknown device'}"
+        comment_result = _http_request_json(
+            f"{instance}/api/now/table/{req.service_now.table_name}/{req.service_now.record_sys_id}",
+            "PATCH",
+            payload,
+            headers,
+        )
+
+    return attachment_results, comment_result, {
+        "platform": "ServiceNow",
+        "instance_url": instance,
+        "table_name": req.service_now.table_name,
+        "record_sys_id": req.service_now.record_sys_id,
+    }
+
+
+def _export_review_to_jira(req: ReviewExportRequest, review) -> tuple[list[dict[str, str | int]], dict[str, str | bool | int | None], dict[str, str]]:
+    if not req.jira:
+        raise HTTPException(status_code=400, detail="jira options are required for Jira export.")
+
+    base_url = req.jira.base_url.rstrip("/")
+    auth_headers = {"Accept": "application/json", **_build_auth_headers(req.auth)}
+    artifacts = _render_export_artifacts(review, req.attachment_prefix, req.include_pdf, req.include_json, req.include_html)
+    attachment_results: list[dict[str, str | int]] = []
+    for artifact in artifacts:
+        result = _http_request_multipart(
+            f"{base_url}/rest/api/3/issue/{req.jira.issue_key}/attachments",
+            "POST",
+            [{
+                "name": "file",
+                "filename": str(artifact["filename"]),
+                "content_type": str(artifact["content_type"]),
+                "data": artifact["data"],
+            }],
+            {**auth_headers, "X-Atlassian-Token": "no-check"},
+        )
+        attachment_results.append(
+            {
+                "filename": str(artifact["filename"]),
+                "content_type": str(artifact["content_type"]),
+                "bytes": len(artifact["data"]),
+                "status_code": int(result.get("status_code") or 0),
+            }
+        )
+
+    comment_result = {"attempted": False, "delivered": False, "status_code": None, "detail": None}
+    if req.jira.add_comment:
+        comment_result = _http_request_json(
+            f"{base_url}/rest/api/3/issue/{req.jira.issue_key}/comment",
+            "POST",
+            {
+                "body": {
+                    "type": "doc",
+                    "version": 1,
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [{"type": "text", "text": _build_export_summary_text(review, req.export_comment)}],
+                        }
+                    ],
+                }
+            },
+            auth_headers,
+        )
+
+    return attachment_results, comment_result, {
+        "platform": "Jira Cloud",
+        "base_url": base_url,
+        "issue_key": req.jira.issue_key,
+    }
 
 
 def _run_analysis(req: AnalyzeRequest) -> AnalyzeResponse:
@@ -580,6 +807,48 @@ async def pipeline_review(req: PipelineReviewRequest, _=Depends(_verify_key)):
         )
 
     return response
+
+
+@router.post("/export/review", response_model=ReviewExportResponse)
+async def export_review(req: ReviewExportRequest, _=Depends(_verify_key)):
+    """Render a review and attach its artifacts to ServiceNow or Jira Cloud."""
+    review = _run_analysis(
+        AnalyzeRequest(
+            config_text=req.config_text,
+            vendor=req.vendor,
+            os_version=req.os_version,
+            template_id=req.template_id,
+            template_name=req.template_name,
+            template_version=req.template_version,
+            engineer_name=req.engineer_name,
+            template_rules=req.template_rules,
+            quick_pass=req.quick_pass,
+            snippet_mode=req.snippet_mode,
+            context_hint=req.context_hint,
+        )
+    )
+
+    if req.target.value == "servicenow":
+        attachments, comment_result, destination = _export_review_to_servicenow(req, review)
+    else:
+        attachments, comment_result, destination = _export_review_to_jira(req, review)
+
+    return ReviewExportResponse(
+        target=req.target,
+        review_id=review.review_id,
+        destination=destination,
+        attachments=attachments,
+        comment=comment_result,
+        summary={
+            "hostname": review.report.header.hostname or "unknown",
+            "platform_detected": review.report.header.platform_detected,
+            "pass_fail": review.report.body.executive_summary.pass_fail_label,
+            "risk_score": review.report.body.executive_summary.risk_score,
+            "attachments_attempted": len(attachments),
+            "comment_attempted": bool(comment_result.get("attempted")),
+        },
+        review=review,
+    )
 
 
 @router.post("/query", response_model=NLQueryResponse)

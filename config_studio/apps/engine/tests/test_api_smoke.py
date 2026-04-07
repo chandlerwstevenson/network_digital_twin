@@ -182,6 +182,7 @@ def test_pipeline_review_blocks_on_critical_findings():
         headers=HEADERS,
         json={
             "config_text": """hostname r1
+enable password lab123
 ip http server
 line vty 0 4
  transport input telnet
@@ -195,6 +196,7 @@ line vty 0 4
     assert body["gate_status"] == "block"
     assert body["should_block"] is True
     assert body["blocking_findings_count"] >= 1
+    assert any(finding["severity"] == "critical" for finding in body["blocking_findings"])
     assert body["review"] is None
 
 
@@ -224,6 +226,97 @@ interface GigabitEthernet0/0
     assert body["gate_status"] in ["pass", "block"]
     assert body["webhook"]["attempted"] is True
     send_webhook.assert_called_once()
+
+
+def test_export_review_requires_api_key():
+    response = client.post(
+        "/api/export/review",
+        json={
+            "config_text": "hostname r1",
+            "target": "jira",
+            "auth": {"auth_type": "bearer", "token": "secret"},
+            "jira": {"base_url": "https://example.atlassian.net", "issue_key": "NET-123"},
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_export_review_to_jira_attaches_artifacts_and_posts_comment():
+    with patch("app.api.routes._http_request_multipart", return_value={
+        "attempted": True,
+        "delivered": True,
+        "status_code": 200,
+        "detail": "uploaded",
+    }) as upload, patch("app.api.routes._http_request_json", return_value={
+        "attempted": True,
+        "delivered": True,
+        "status_code": 201,
+        "detail": "commented",
+    }) as post_json:
+        response = client.post(
+            "/api/export/review",
+            headers=HEADERS,
+            json={
+                "config_text": "hostname r1\nip http server\nline vty 0 4\n transport input telnet",
+                "engineer_name": "Chandler",
+                "target": "jira",
+                "auth": {"auth_type": "bearer", "token": "jira-token"},
+                "jira": {"base_url": "https://example.atlassian.net", "issue_key": "NET-123"},
+                "include_pdf": True,
+                "include_json": True,
+                "include_html": False,
+                "export_comment": "Attach to the maintenance ticket.",
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["target"] == "jira"
+    assert body["destination"]["issue_key"] == "NET-123"
+    assert len(body["attachments"]) == 2
+    assert body["comment"]["attempted"] is True
+    assert upload.call_count == 2
+    post_json.assert_called_once()
+
+
+def test_export_review_to_servicenow_attaches_artifacts_and_updates_record():
+    with patch("app.api.routes._http_request_multipart", return_value={
+        "attempted": True,
+        "delivered": True,
+        "status_code": 201,
+        "detail": "uploaded",
+    }) as upload, patch("app.api.routes._http_request_json", return_value={
+        "attempted": True,
+        "delivered": True,
+        "status_code": 200,
+        "detail": "updated",
+    }) as patch_json:
+        response = client.post(
+            "/api/export/review",
+            headers=HEADERS,
+            json={
+                "config_text": "hostname r1\nip http server",
+                "target": "servicenow",
+                "auth": {"auth_type": "basic", "username": "api-user", "password": "api-pass"},
+                "service_now": {
+                    "instance_url": "https://example.service-now.com",
+                    "table_name": "change_request",
+                    "record_sys_id": "abcd1234"
+                },
+                "include_pdf": True,
+                "include_json": False,
+                "include_html": False,
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["target"] == "servicenow"
+    assert body["destination"]["record_sys_id"] == "abcd1234"
+    assert len(body["attachments"]) == 1
+    assert body["comment"]["attempted"] is True
+    upload.assert_called_once()
+    patch_json.assert_called_once()
 
 
 def test_query_requires_api_key():

@@ -114,6 +114,50 @@ class PipelineReviewRequest(AnalyzeRequest):
     webhook_headers: dict[str, str] = Field(default_factory=dict)
 
 
+class IntegrationTarget(str, Enum):
+    SERVICENOW = "servicenow"
+    JIRA = "jira"
+
+
+class IntegrationAuthType(str, Enum):
+    BASIC = "basic"
+    BEARER = "bearer"
+
+
+class IntegrationAuth(BaseModel):
+    auth_type: IntegrationAuthType = IntegrationAuthType.BEARER
+    username: str | None = None
+    password: str | None = None
+    token: str | None = None
+
+
+class ServiceNowExportOptions(BaseModel):
+    instance_url: str
+    table_name: str = "change_request"
+    record_sys_id: str
+    update_work_notes: bool = True
+    update_short_description: bool = False
+
+
+class JiraExportOptions(BaseModel):
+    base_url: str
+    issue_key: str
+    add_comment: bool = True
+
+
+class ReviewExportRequest(AnalyzeRequest):
+    target: IntegrationTarget
+    auth: IntegrationAuth
+    service_now: ServiceNowExportOptions | None = None
+    jira: JiraExportOptions | None = None
+    include_pdf: bool = True
+    include_json: bool = True
+    include_html: bool = False
+    export_comment: str | None = None
+    attachment_prefix: str = "config-studio-review"
+    metadata: dict[str, str] = Field(default_factory=dict)
+
+
 # ---------------------------------------------------------------------------
 # Template models
 # ---------------------------------------------------------------------------
@@ -311,3 +355,13 @@ class PipelineReviewResponse(BaseModel):
     summary: dict[str, int | str | bool] = Field(default_factory=dict)
     review: AnalyzeResponse | None = None
     webhook: dict[str, str | bool | int | None] = Field(default_factory=dict)
+
+
+class ReviewExportResponse(BaseModel):
+    target: IntegrationTarget
+    review_id: str
+    destination: dict[str, str] = Field(default_factory=dict)
+    attachments: list[dict[str, str | int]] = Field(default_factory=list)
+    comment: dict[str, str | bool | int | None] = Field(default_factory=dict)
+    summary: dict[str, str | int | bool] = Field(default_factory=dict)
+    review: AnalyzeResponse

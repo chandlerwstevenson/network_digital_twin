@@ -74,7 +74,7 @@ def detect_vendor(config_text: str) -> VendorDetection:
         )
 
     # --- Fallback: deeper IOS heuristic ---
-    if re.search(r"^(interface|router|ip route|access-list)\s", text, re.MULTILINE):
+    if re.search(r"^(hostname\s+\S+|interface|router|ip route|access-list|line\s+vty|line\s+con|line\s+aux|ip http\s+server|snmp-server|aaa\s+new-model)\b", text, re.MULTILINE):
         hostname = _extract_hostname_ios(text)
         return VendorDetection(
             vendor=Vendor.CISCO_IOS,
