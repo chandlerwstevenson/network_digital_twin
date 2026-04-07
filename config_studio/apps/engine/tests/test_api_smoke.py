@@ -403,3 +403,185 @@ def test_multi_query_preserves_hostname_when_vendor_is_manually_overridden():
     body = response.json()
     assert len(body["matches"]) == 1
     assert body["matches"][0]["hostname"] == "EDGE-A"
+
+
+def test_export_review_rejects_invalid_jira_url():
+    response = client.post(
+        "/api/export/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "target": "jira",
+            "auth": {"auth_type": "bearer", "token": "jira-token"},
+            "jira": {"base_url": "not-a-url", "issue_key": "NET-123"},
+        },
+    )
+
+    assert response.status_code == 400
+    assert "jira.base_url" in response.json()["detail"]
+
+
+def test_export_review_to_webhook_posts_summary_and_embedded_artifacts():
+    captured = {}
+
+    def fake_send(url, payload, headers):
+        captured["url"] = url
+        captured["payload"] = payload
+        captured["headers"] = headers
+        return {
+            "attempted": True,
+            "delivered": True,
+            "status_code": 202,
+            "detail": "accepted",
+        }
+
+    with patch("app.api.routes._send_review_webhook", side_effect=fake_send) as send_webhook:
+        response = client.post(
+            "/api/export/review",
+            headers=HEADERS,
+            json={
+                "config_text": "hostname r1\nip http server\nline vty 0 4\n transport input telnet",
+                "target": "webhook",
+                "webhook": {
+                    "url": "https://itsm.example.test/hooks/change-record",
+                    "headers": {"X-ITSM-Key": "abc123"},
+                    "include_review_payload": True,
+                    "embed_artifacts": True,
+                },
+                "include_pdf": False,
+                "include_json": True,
+                "include_html": True,
+                "export_comment": "Push into alternate ITSM.",
+                "metadata": {"change_id": "CHG-42"},
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["target"] == "webhook"
+    assert body["destination"]["url"] == "https://itsm.example.test/hooks/change-record"
+    assert len(body["attachments"]) == 2
+    assert body["delivery"]["attempted"] is True
+    assert body["comment"]["attempted"] is False
+    send_webhook.assert_called_once()
+    assert captured["url"] == "https://itsm.example.test/hooks/change-record"
+    assert captured["headers"] == {"X-ITSM-Key": "abc123"}
+    assert captured["payload"]["metadata"]["change_id"] == "CHG-42"
+    assert captured["payload"]["review"]["report"]["body"]["executive_summary"]["pass_fail_label"] in ["PASS", "FAIL"]
+    assert all("data_base64" in artifact for artifact in captured["payload"]["artifacts"])
+
+
+def test_export_review_to_webhook_rejects_invalid_url():
+    response = client.post(
+        "/api/export/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "target": "webhook",
+            "webhook": {"url": "ftp://example.test/bad"},
+        },
+    )
+
+    assert response.status_code == 400
+    assert "webhook.url" in response.json()["detail"]
+
+
+def test_export_review_surfaces_partial_jira_delivery_failures():
+    with patch("app.api.routes._http_request_multipart", side_effect=[
+        {
+            "attempted": True,
+            "delivered": True,
+            "status_code": 200,
+            "detail": "uploaded json",
+        },
+        {
+            "attempted": True,
+            "delivered": False,
+            "status_code": 502,
+            "detail": "attachment gateway failure",
+        },
+    ]) as upload, patch("app.api.routes._http_request_json", return_value={
+        "attempted": True,
+        "delivered": False,
+        "status_code": 500,
+        "detail": "jira comment failed",
+    }) as post_json:
+        response = client.post(
+            "/api/export/review",
+            headers=HEADERS,
+            json={
+                "config_text": "hostname r1\nip http server\nline vty 0 4\n transport input telnet",
+                "target": "jira",
+                "auth": {"auth_type": "bearer", "token": "jira-token"},
+                "jira": {"base_url": "https://example.atlassian.net", "issue_key": "NET-123"},
+                "include_pdf": True,
+                "include_json": True,
+                "include_html": False,
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]["export_status"] == "partial_failure"
+    assert body["summary"]["has_failures"] is True
+    assert body["summary"]["attachments_attempted"] == 2
+    assert body["summary"]["attachments_delivered"] == 1
+    assert body["summary"]["attachments_failed"] == 1
+    assert body["summary"]["comment_attempted"] is True
+    assert body["summary"]["comment_delivered"] is False
+    assert not body["attachments"][1]["delivered"]
+    assert body["attachments"][1]["detail"] == "attachment gateway failure"
+    upload.assert_called()
+    post_json.assert_called_once()
+
+
+def test_export_review_surfaces_failed_webhook_delivery():
+    with patch("app.api.routes._send_review_webhook", return_value={
+        "attempted": True,
+        "delivered": False,
+        "status_code": 503,
+        "detail": "upstream unavailable",
+    }) as send_webhook:
+        response = client.post(
+            "/api/export/review",
+            headers=HEADERS,
+            json={
+                "config_text": "hostname r1\nip http server",
+                "target": "webhook",
+                "webhook": {
+                    "url": "https://itsm.example.test/hooks/change-record",
+                    "include_review_payload": False,
+                    "embed_artifacts": False,
+                },
+                "include_pdf": False,
+                "include_json": True,
+                "include_html": False,
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]["export_status"] == "failed"
+    assert body["summary"]["has_failures"] is True
+    assert body["summary"]["attachments_attempted"] == 1
+    assert body["summary"]["attachments_delivered"] == 1
+    assert body["summary"]["delivery_attempted"] is True
+    assert body["summary"]["delivery_delivered"] is False
+    assert body["delivery"]["status_code"] == 503
+    assert body["delivery"]["detail"] == "upstream unavailable"
+    send_webhook.assert_called_once()
+
+
+def test_export_review_to_jira_requires_auth():
+    response = client.post(
+        "/api/export/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "target": "jira",
+            "jira": {"base_url": "https://example.atlassian.net", "issue_key": "NET-123"},
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "auth is required for Jira export."

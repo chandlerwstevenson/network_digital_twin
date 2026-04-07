@@ -117,6 +117,7 @@ class PipelineReviewRequest(AnalyzeRequest):
 class IntegrationTarget(str, Enum):
     SERVICENOW = "servicenow"
     JIRA = "jira"
+    WEBHOOK = "webhook"
 
 
 class IntegrationAuthType(str, Enum):
@@ -145,11 +146,19 @@ class JiraExportOptions(BaseModel):
     add_comment: bool = True
 
 
+class WebhookExportOptions(BaseModel):
+    url: str
+    headers: dict[str, str] = Field(default_factory=dict)
+    include_review_payload: bool = True
+    embed_artifacts: bool = False
+
+
 class ReviewExportRequest(AnalyzeRequest):
     target: IntegrationTarget
-    auth: IntegrationAuth
+    auth: IntegrationAuth | None = None
     service_now: ServiceNowExportOptions | None = None
     jira: JiraExportOptions | None = None
+    webhook: WebhookExportOptions | None = None
     include_pdf: bool = True
     include_json: bool = True
     include_html: bool = False
@@ -363,5 +372,6 @@ class ReviewExportResponse(BaseModel):
     destination: dict[str, str] = Field(default_factory=dict)
     attachments: list[dict[str, str | int]] = Field(default_factory=list)
     comment: dict[str, str | bool | int | None] = Field(default_factory=dict)
+    delivery: dict[str, str | bool | int | None] = Field(default_factory=dict)
     summary: dict[str, str | int | bool] = Field(default_factory=dict)
     review: AnalyzeResponse

@@ -8,6 +8,7 @@ import io
 import json
 import mimetypes
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 import zipfile
@@ -249,6 +250,13 @@ def _build_auth_headers(auth) -> dict[str, str]:
     return {"Authorization": f"Bearer {auth.token}"}
 
 
+def _require_http_url(url: str, field_name: str) -> str:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise HTTPException(status_code=400, detail=f"{field_name} must be a valid http(s) URL.")
+    return url
+
+
 def _http_request_json(url: str, method: str, payload: dict | None, headers: dict[str, str]) -> dict[str, str | bool | int | None]:
     body = json.dumps(payload).encode("utf-8") if payload is not None else None
     request_headers = {"Content-Type": "application/json", **headers}
@@ -362,6 +370,110 @@ def _render_export_artifacts(review, attachment_prefix: str, include_pdf: bool, 
     return artifacts
 
 
+def _serialize_export_artifacts_for_webhook(review, attachment_prefix: str, include_pdf: bool, include_json: bool, include_html: bool, embed_artifacts: bool) -> tuple[list[dict[str, str | int]], list[dict[str, str | int | str]]]:
+    rendered = _render_export_artifacts(review, attachment_prefix, include_pdf, include_json, include_html)
+    attachment_results: list[dict[str, str | int]] = []
+    payload_artifacts: list[dict[str, str | int | str]] = []
+    for artifact in rendered:
+        artifact_meta = {
+            "filename": str(artifact["filename"]),
+            "content_type": str(artifact["content_type"]),
+            "bytes": len(artifact["data"]),
+        }
+        attachment_results.append(artifact_meta)
+        payload_artifact = dict(artifact_meta)
+        if embed_artifacts:
+            payload_artifact["data_base64"] = base64.b64encode(artifact["data"]).decode("ascii")
+        payload_artifacts.append(payload_artifact)
+    return attachment_results, payload_artifacts
+
+
+def _export_review_to_webhook(req: ReviewExportRequest, review) -> tuple[list[dict[str, str | int]], dict[str, str | bool | int | None], dict[str, str]]:
+    if not req.webhook:
+        raise HTTPException(status_code=400, detail="webhook options are required for webhook export.")
+
+    webhook_url = _require_http_url(req.webhook.url, "webhook.url")
+    attachments, payload_artifacts = _serialize_export_artifacts_for_webhook(
+        review,
+        req.attachment_prefix,
+        req.include_pdf,
+        req.include_json,
+        req.include_html,
+        req.webhook.embed_artifacts,
+    )
+    payload = {
+        "event": "config_review.exported",
+        "target": "webhook",
+        "review_id": review.review_id,
+        "generated_at_utc": review.report.header.generated_at_utc,
+        "destination": {
+            "platform": "Webhook",
+            "url": webhook_url,
+        },
+        "summary": {
+            "hostname": review.report.header.hostname or "unknown",
+            "platform_detected": review.report.header.platform_detected,
+            "pass_fail": review.report.body.executive_summary.pass_fail_label,
+            "risk_score": review.report.body.executive_summary.risk_score,
+            "finding_counts": review.report.body.executive_summary.finding_counts,
+            "config_hash": review.config_hash,
+        },
+        "export_comment": req.export_comment,
+        "metadata": req.metadata,
+        "artifacts": payload_artifacts,
+    }
+    if req.webhook.include_review_payload:
+        payload["review"] = review.model_dump()
+
+    delivery_result = _send_review_webhook(webhook_url, payload, req.webhook.headers)
+    return attachments, delivery_result, {
+        "platform": "Webhook",
+        "url": webhook_url,
+    }
+
+
+def _count_delivered_attachments(attachments: list[dict[str, str | int | bool | None]]) -> int:
+    delivered = 0
+    for attachment in attachments:
+        if "delivered" not in attachment:
+            delivered += 1
+        elif attachment.get("delivered") is True:
+            delivered += 1
+    return delivered
+
+
+def _derive_export_status(
+    attachments: list[dict[str, str | int | bool | None]],
+    comment_result: dict[str, str | bool | int | None],
+    delivery_result: dict[str, str | bool | int | None],
+) -> tuple[str, bool]:
+    attempted_components: list[bool] = []
+    delivered_components: list[bool] = []
+
+    for attachment in attachments:
+        attempted_components.append(True)
+        delivered_components.append(bool(attachment.get("delivered")))
+
+    if comment_result.get("attempted"):
+        attempted_components.append(True)
+        delivered_components.append(bool(comment_result.get("delivered")))
+
+    if delivery_result.get("attempted"):
+        attempted_components.append(True)
+        delivered_components.append(bool(delivery_result.get("delivered")))
+
+    if not attempted_components:
+        return "not_attempted", False
+
+    if all(delivered_components):
+        return "success", False
+
+    if any(delivered_components):
+        return "partial_failure", True
+
+    return "failed", True
+
+
 def _build_export_summary_text(review, export_comment: str | None = None) -> str:
     summary = review.report.body.executive_summary
     lines = [
@@ -382,9 +494,11 @@ def _build_export_summary_text(review, export_comment: str | None = None) -> str
 def _export_review_to_servicenow(req: ReviewExportRequest, review) -> tuple[list[dict[str, str | int]], dict[str, str | bool | int | None], dict[str, str]]:
     if not req.service_now:
         raise HTTPException(status_code=400, detail="service_now options are required for ServiceNow export.")
+    if not req.auth:
+        raise HTTPException(status_code=400, detail="auth is required for ServiceNow export.")
 
     headers = {"Accept": "application/json", **_build_auth_headers(req.auth)}
-    instance = req.service_now.instance_url.rstrip("/")
+    instance = _require_http_url(req.service_now.instance_url, "service_now.instance_url").rstrip("/")
     artifacts = _render_export_artifacts(review, req.attachment_prefix, req.include_pdf, req.include_json, req.include_html)
     attachment_results: list[dict[str, str | int]] = []
     for artifact in artifacts:
@@ -408,7 +522,10 @@ def _export_review_to_servicenow(req: ReviewExportRequest, review) -> tuple[list
                 "filename": str(artifact["filename"]),
                 "content_type": str(artifact["content_type"]),
                 "bytes": len(artifact["data"]),
+                "attempted": bool(result.get("attempted")),
+                "delivered": bool(result.get("delivered")),
                 "status_code": int(result.get("status_code") or 0),
+                "detail": str(result.get("detail") or ""),
             }
         )
 
@@ -437,8 +554,10 @@ def _export_review_to_servicenow(req: ReviewExportRequest, review) -> tuple[list
 def _export_review_to_jira(req: ReviewExportRequest, review) -> tuple[list[dict[str, str | int]], dict[str, str | bool | int | None], dict[str, str]]:
     if not req.jira:
         raise HTTPException(status_code=400, detail="jira options are required for Jira export.")
+    if not req.auth:
+        raise HTTPException(status_code=400, detail="auth is required for Jira export.")
 
-    base_url = req.jira.base_url.rstrip("/")
+    base_url = _require_http_url(req.jira.base_url, "jira.base_url").rstrip("/")
     auth_headers = {"Accept": "application/json", **_build_auth_headers(req.auth)}
     artifacts = _render_export_artifacts(review, req.attachment_prefix, req.include_pdf, req.include_json, req.include_html)
     attachment_results: list[dict[str, str | int]] = []
@@ -459,7 +578,10 @@ def _export_review_to_jira(req: ReviewExportRequest, review) -> tuple[list[dict[
                 "filename": str(artifact["filename"]),
                 "content_type": str(artifact["content_type"]),
                 "bytes": len(artifact["data"]),
+                "attempted": bool(result.get("attempted")),
+                "delivered": bool(result.get("delivered")),
                 "status_code": int(result.get("status_code") or 0),
+                "detail": str(result.get("detail") or ""),
             }
         )
 
@@ -828,10 +950,17 @@ async def export_review(req: ReviewExportRequest, _=Depends(_verify_key)):
         )
     )
 
+    delivery_result = {"attempted": False, "delivered": False, "status_code": None, "detail": None}
     if req.target.value == "servicenow":
         attachments, comment_result, destination = _export_review_to_servicenow(req, review)
-    else:
+    elif req.target.value == "jira":
         attachments, comment_result, destination = _export_review_to_jira(req, review)
+    else:
+        attachments, delivery_result, destination = _export_review_to_webhook(req, review)
+        comment_result = {"attempted": False, "delivered": False, "status_code": None, "detail": None}
+
+    delivered_attachments = _count_delivered_attachments(attachments)
+    export_status, has_failures = _derive_export_status(attachments, comment_result, delivery_result)
 
     return ReviewExportResponse(
         target=req.target,
@@ -839,13 +968,21 @@ async def export_review(req: ReviewExportRequest, _=Depends(_verify_key)):
         destination=destination,
         attachments=attachments,
         comment=comment_result,
+        delivery=delivery_result,
         summary={
             "hostname": review.report.header.hostname or "unknown",
             "platform_detected": review.report.header.platform_detected,
             "pass_fail": review.report.body.executive_summary.pass_fail_label,
             "risk_score": review.report.body.executive_summary.risk_score,
+            "export_status": export_status,
+            "has_failures": has_failures,
             "attachments_attempted": len(attachments),
+            "attachments_delivered": delivered_attachments,
+            "attachments_failed": len(attachments) - delivered_attachments,
             "comment_attempted": bool(comment_result.get("attempted")),
+            "comment_delivered": bool(comment_result.get("delivered")),
+            "delivery_attempted": bool(delivery_result.get("attempted")),
+            "delivery_delivered": bool(delivery_result.get("delivered")),
         },
         review=review,
     )

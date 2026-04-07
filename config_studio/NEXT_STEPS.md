@@ -23,16 +23,27 @@ Requirements:
 
 Status update (2026-04-07):
 - real FastAPI/Pydantic/Pytest runtime is now working locally under Python 3.13 in repo venv `.venv313`
-- endpoint smoke suite currently passes (`20 passed`)
-- export endpoint coverage exists for Jira and ServiceNow mocked attachment/comment flows
-- one real parser gap was fixed: Cisco fallback vendor detection now recognizes hostname/security-oriented snippets well enough to avoid silently skipping IOS security linting
+- endpoint smoke suite currently passes (`26 passed`)
+- export endpoint coverage now includes Jira, ServiceNow, and generic webhook delivery for non-native ITSM targets
+- export URL validation now rejects malformed Jira/ServiceNow/webhook destinations instead of attempting bad outbound calls
+- export responses now surface aggregate delivery health (`export_status`, attachment success/failure counts, comment/webhook delivery flags) so partial ITSM handoff failures are explicit instead of implicit
 
 Next target:
-- expand abuse/edge-case coverage for `/api/pipeline/review`, `/api/batch-review`, and `/api/export/review`
-- verify multipart attachment behavior against realistic mocked responses
-- add negative tests for auth/input validation and partial export failures
+- add abuse/size guardrail tests for `/api/batch-review`
+- add more endpoint-level assertions around pipeline webhook payload shape and blocking thresholds
+- expand negative-path coverage around ServiceNow-specific export failures and malformed auth combinations
 
-### 2. Findings quality
+### 2. ITSM UX in the web app
+Requirements:
+- REQ-3.4.6 direct export integration
+- REQ-3.6.4 ServiceNow and Jira Cloud integration
+
+Target:
+- add one-click export actions in `apps/web`
+- capture Jira/ServiceNow/webhook destination details without forcing manual JSON editing
+- surface attachment/export status clearly for change-window workflows
+
+### 3. Findings quality
 Requirements:
 - REQ-3.3.3 semantic analysis
 - REQ-3.3.4 security checks
@@ -43,16 +54,6 @@ Target:
 - reduce false positives
 - strengthen JunOS coverage
 - ensure findings consistently include useful remediation/rollback/context
-
-### 3. ITSM UX in the web app
-Requirements:
-- REQ-3.4.6 direct export integration
-- REQ-3.6.4 ServiceNow and Jira Cloud integration
-
-Target:
-- add one-click export actions in `apps/web`
-- capture Jira/ServiceNow destination details without forcing manual JSON editing
-- surface attachment/export status clearly for change-window workflows
 
 ### 4. Persistence
 Requirements:

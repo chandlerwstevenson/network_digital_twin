@@ -8,13 +8,13 @@ Current repo contents:
 - `apps/web` — working static frontend for review, query, batch review, template authoring, compare, and operator workflows
 - `packages/shared` — shared TypeScript domain types
 - `supabase/` — schema and backend data model draft
-- `examples/` — CI/CD and ITSM integration examples for GitHub Actions, GitLab CI, Jenkins, Jira Cloud, ServiceNow, and a local shell gate
+- `examples/` — CI/CD and ITSM integration examples for GitHub Actions, GitLab CI, Jenkins, Jira Cloud, ServiceNow, generic webhooks, and a local shell gate
 
 ## Status
 
 This repository is now a **working end-to-end prototype**, not just an engine stub.
 
-The current implementation covers the day-one web flow plus a pipeline-oriented REST gate for pre-merge / pre-deploy review and direct export hooks for Jira Cloud / ServiceNow change records. See `REQUIREMENT.txt` for product targets and `NEXT_STEPS.md` for the current structured work loop.
+The current implementation covers the day-one web flow plus a pipeline-oriented REST gate for pre-merge / pre-deploy review and direct export hooks for Jira Cloud, ServiceNow change records, and generic ITSM webhooks. See `REQUIREMENT.txt` for product targets and `NEXT_STEPS.md` for the current structured work loop.
 
 ## Engine development
 
@@ -44,7 +44,7 @@ python3 -m pytest -q
 Validated locally on 2026-04-07:
 - `npm run build --workspace apps/web`
 - `python3 -m py_compile apps/engine/app/api/routes.py apps/engine/app/api/schemas.py apps/engine/app/parsers/detector.py apps/engine/tests/test_api_smoke.py`
-- `../../.venv313/bin/pytest -q` from `apps/engine` → `20 passed`
+- `./.venv313/bin/pytest -q apps/engine/tests/test_api_smoke.py` from repo root → `26 passed`
 
 ## Desktop app
 
@@ -82,19 +82,20 @@ See `examples/` for:
 
 ## ITSM export endpoint
 
-Config Studio now exposes a direct report-export endpoint for ServiceNow and Jira Cloud:
+Config Studio now exposes a direct report-export endpoint for ServiceNow, Jira Cloud, and generic ITSM webhooks:
 
 ```bash
 POST /api/export/review
 ```
 
-It renders the same structured review artifact used by JSON/PDF report generation, then attaches those artifacts to a ServiceNow change record or Jira issue and optionally posts a summary comment/work note.
+It renders the same structured review artifact used by JSON/PDF report generation, then either attaches those artifacts to a ServiceNow change record or Jira issue, or posts a webhook payload for other ITSM platforms. Export responses now surface attachment/comment/delivery outcome details plus an aggregate `export_status` (`success`, `partial_failure`, or `failed`) so change-window tooling can detect partial handoff problems immediately.
 
 Highlights:
 - ServiceNow change record attachment via `/api/now/attachment/file`
 - ServiceNow work-note / short-description update via `/api/now/table/...`
 - Jira Cloud issue attachment via `/rest/api/3/issue/{key}/attachments`
 - Jira comment creation via `/rest/api/3/issue/{key}/comment`
+- generic webhook delivery for non-native ITSM targets, with review summary plus optional inline artifacts
 - same review payload reused for both export and normal report generation
 
 Example Jira export call:
@@ -118,6 +119,15 @@ SERVICENOW_PASSWORD=api-pass \
 ./examples/servicenow-export.sh ./apps/engine/tests/fixtures/cisco_ios_bad.conf 0123456789abcdef0123456789abcdef
 ```
 
+Example generic webhook export call:
+
+```bash
+CONFIG_STUDIO_URL=http://127.0.0.1:8000 \
+CONFIG_STUDIO_API_KEY=dev-engine-key \
+./examples/webhook-export.sh ./apps/engine/tests/fixtures/cisco_ios_bad.conf https://itsm.example/hooks/change-record
+```
+
 See `examples/` for:
 - `jira-export.sh`
 - `servicenow-export.sh`
+- `webhook-export.sh`
