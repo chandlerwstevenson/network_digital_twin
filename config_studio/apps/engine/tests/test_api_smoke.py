@@ -1,3 +1,6 @@
+import base64
+import io
+import zipfile
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -7,6 +10,14 @@ from app.main import app
 
 client = TestClient(app)
 HEADERS = {"x-api-key": "dev-engine-key"}
+
+
+def make_zip_base64(files: dict[str, bytes | str]) -> str:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, content in files.items():
+            archive.writestr(name, content)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 def test_health():
@@ -166,6 +177,35 @@ router bgp 65002
     assert "Cross-device BGP peer mismatch" in titles
     assert body["summary"]["total"] >= 3
     assert len(body["inferred_links"]) >= 1
+
+
+def test_batch_review_rejects_config_larger_than_2mb():
+    response = client.post(
+        "/api/batch-review",
+        headers=HEADERS,
+        json={
+            "zip_filename": "oversized.zip",
+            "zip_base64": make_zip_base64({"router.cfg": "a" * (2 * 1024 * 1024 + 1)}),
+        },
+    )
+
+    assert response.status_code == 400
+    assert "2 MB per-file batch review limit" in response.json()["detail"]
+
+
+def test_batch_review_rejects_zip_with_too_many_members():
+    files = {f"configs/device-{idx}.cfg": "hostname r1\n" for idx in range(251)}
+    response = client.post(
+        "/api/batch-review",
+        headers=HEADERS,
+        json={
+            "zip_filename": "too-many-members.zip",
+            "zip_base64": make_zip_base64(files),
+        },
+    )
+
+    assert response.status_code == 400
+    assert "too many entries" in response.json()["detail"]
 
 
 def test_pipeline_review_requires_api_key():

@@ -67,6 +67,9 @@ from app.correlation import correlate_configs
 router = APIRouter()
 
 ALLOWED_BATCH_EXTENSIONS = {".txt", ".conf", ".cfg", ".log", ".config", ".cnf", ".txt.bak"}
+MAX_BATCH_CONFIG_BYTES = 2 * 1024 * 1024
+MAX_BATCH_TOTAL_CONFIG_BYTES = 50 * MAX_BATCH_CONFIG_BYTES
+MAX_BATCH_ARCHIVE_MEMBERS = 250
 SEVERITY_RANK = {"info": 1, "warning": 2, "critical": 3}
 
 
@@ -207,18 +210,40 @@ def _extract_batch_zip(req: BatchReviewRequest) -> list[tuple[str, str]]:
     except zipfile.BadZipFile as exc:
         raise HTTPException(status_code=400, detail="Uploaded file is not a valid ZIP archive.") from exc
 
+    members = archive.infolist()
+    if len(members) > MAX_BATCH_ARCHIVE_MEMBERS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"ZIP archive contains too many entries. Limit is {MAX_BATCH_ARCHIVE_MEMBERS} files per upload.",
+        )
+
     extracted: list[tuple[str, str]] = []
-    for info in archive.infolist():
+    total_config_bytes = 0
+    for info in members:
         if info.is_dir():
             continue
 
         suffixes = Path(info.filename).suffixes
         extension_match = any(suffix.lower() in ALLOWED_BATCH_EXTENSIONS for suffix in (suffixes[-2:] or suffixes))
+
+        if info.file_size > MAX_BATCH_CONFIG_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Config '{info.filename}' exceeds the 2 MB per-file batch review limit.",
+            )
+
         with archive.open(info) as handle:
             raw = handle.read()
 
         if not extension_match and not _is_probably_text(raw):
             continue
+
+        total_config_bytes += len(raw)
+        if total_config_bytes > MAX_BATCH_TOTAL_CONFIG_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail="ZIP archive contains too much config data. Batch review supports up to 100 MB of extracted text across all files.",
+            )
 
         try:
             text = raw.decode("utf-8")
