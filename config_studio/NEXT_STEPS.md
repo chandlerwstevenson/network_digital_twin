@@ -59,6 +59,7 @@ Next target:
 - batch triage queue now also has operator-focused filter/search controls so medium-size ZIP reviews can be narrowed to needs-attention / critical / failing / pending / export-issue subsets and searched by filename, hostname, vendor, finding title, or destination during a live change window
 - queue-level batch quick actions now respect the visible filtered/search slice instead of acting on hidden reviews elsewhere in the queue, which removes a real change-window footgun when an engineer narrows to a subset and expects “next pending” / “retry first failed” to stay inside that slice
 - the analysis workspace now includes a batch queue navigator when a review is opened from a ZIP batch, so the engineer can move previous/next within the current visible slice and use a one-click `mark done + open next pending` flow without bouncing back down to the batch panel after every device
+- single-file upload intake now surfaces filename/size/line-count status, supports more real export suffixes (`.config`, `.cnf`, `.bak`), and warns before analysis when the selected file is empty, oversized (>2 MB), binary-looking, or otherwise suspicious instead of silently stuffing it into the workspace
 - return to backend validation depth for ServiceNow partial-failure coverage and export/reporting depth
 - after that, consider whether the batch queue should expose more pre-review ZIP linting before upload (for example, warn locally on obviously empty sidecar-heavy archives)
 
