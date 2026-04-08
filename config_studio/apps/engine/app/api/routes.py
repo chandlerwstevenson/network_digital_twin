@@ -71,6 +71,7 @@ router = APIRouter()
 ALLOWED_BATCH_EXTENSIONS = {".txt", ".conf", ".cfg", ".log", ".config", ".cnf", ".txt.bak"}
 MAX_BATCH_CONFIG_BYTES = 2 * 1024 * 1024
 MAX_BATCH_TOTAL_CONFIG_BYTES = 50 * MAX_BATCH_CONFIG_BYTES
+MAX_BATCH_ARCHIVE_BYTES = 25 * 1024 * 1024
 MAX_BATCH_ARCHIVE_MEMBERS = 250
 SEVERITY_RANK = {"info": 1, "warning": 2, "critical": 3}
 
@@ -233,6 +234,12 @@ def _extract_batch_zip(req: BatchReviewRequest) -> tuple[list[tuple[str, str]], 
         archive_bytes = base64.b64decode(req.zip_base64)
     except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=400, detail=f"Invalid ZIP payload: {exc}") from exc
+
+    if len(archive_bytes) > MAX_BATCH_ARCHIVE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"ZIP archive is too large. Limit is {MAX_BATCH_ARCHIVE_BYTES // (1024 * 1024)} MB per upload.",
+        )
 
     try:
         archive = zipfile.ZipFile(io.BytesIO(archive_bytes))
@@ -579,6 +586,29 @@ def _derive_export_status(
         return "partial_failure", True
 
     return "failed", True
+
+
+def _validate_export_request(req: ReviewExportRequest) -> None:
+    artifact_requested = req.include_pdf or req.include_json or req.include_html
+
+    if req.target.value == "jira":
+        if not req.jira:
+            raise HTTPException(status_code=400, detail="jira options are required for Jira export.")
+        if not artifact_requested and not req.jira.add_comment:
+            raise HTTPException(
+                status_code=400,
+                detail="Jira export must attach at least one artifact or add a comment.",
+            )
+    elif req.target.value == "servicenow":
+        if not req.service_now:
+            raise HTTPException(status_code=400, detail="service_now options are required for ServiceNow export.")
+        if not artifact_requested and not (req.service_now.update_work_notes or req.service_now.update_short_description):
+            raise HTTPException(
+                status_code=400,
+                detail="ServiceNow export must attach at least one artifact or update work notes/short description.",
+            )
+    elif req.target.value == "webhook" and not req.webhook:
+        raise HTTPException(status_code=400, detail="webhook options are required for webhook export.")
 
 
 def _build_export_summary_text(review, export_comment: str | None = None) -> str:
@@ -1035,6 +1065,7 @@ async def pipeline_review(req: PipelineReviewRequest, _=Depends(_verify_key)):
 @router.post("/export/review", response_model=ReviewExportResponse)
 async def export_review(req: ReviewExportRequest, _=Depends(_verify_key)):
     """Render a review and attach its artifacts to ServiceNow or Jira Cloud."""
+    _validate_export_request(req)
     review = _run_analysis(
         AnalyzeRequest(
             config_text=req.config_text,

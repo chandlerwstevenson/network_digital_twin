@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -139,11 +139,27 @@ class ServiceNowExportOptions(BaseModel):
     update_work_notes: bool = True
     update_short_description: bool = False
 
+    @field_validator("instance_url", "table_name", "record_sys_id")
+    @classmethod
+    def _reject_blank_values(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
 
 class JiraExportOptions(BaseModel):
     base_url: str
     issue_key: str
     add_comment: bool = True
+
+    @field_validator("base_url", "issue_key")
+    @classmethod
+    def _reject_blank_values(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
 
 
 class WebhookExportOptions(BaseModel):
@@ -151,6 +167,14 @@ class WebhookExportOptions(BaseModel):
     headers: dict[str, str] = Field(default_factory=dict)
     include_review_payload: bool = True
     embed_artifacts: bool = False
+
+    @field_validator("url")
+    @classmethod
+    def _reject_blank_url(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
 
 
 class ReviewExportRequest(AnalyzeRequest):

@@ -239,6 +239,21 @@ def test_batch_review_rejects_zip_with_too_many_members():
     assert "too many entries" in response.json()["detail"]
 
 
+def test_batch_review_rejects_zip_payload_over_raw_upload_limit():
+    oversized_archive = base64.b64encode(b"0" * (25 * 1024 * 1024 + 1)).decode("ascii")
+    response = client.post(
+        "/api/batch-review",
+        headers=HEADERS,
+        json={
+            "zip_filename": "oversized-raw.zip",
+            "zip_base64": oversized_archive,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "ZIP archive is too large. Limit is 25 MB per upload."
+
+
 def test_pipeline_review_requires_api_key():
     response = client.post(
         "/api/pipeline/review",
@@ -714,6 +729,53 @@ def test_export_review_to_jira_requires_auth():
     assert response.json()["detail"] == "auth is required for Jira export."
 
 
+def test_export_review_to_jira_rejects_noop_request():
+    response = client.post(
+        "/api/export/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "target": "jira",
+            "auth": {"auth_type": "bearer", "token": "jira-token"},
+            "jira": {
+                "base_url": "https://example.atlassian.net",
+                "issue_key": "NET-123",
+                "add_comment": False,
+            },
+            "include_pdf": False,
+            "include_json": False,
+            "include_html": False,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Jira export must attach at least one artifact or add a comment."
+
+
+def test_export_review_to_servicenow_rejects_noop_request():
+    response = client.post(
+        "/api/export/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "target": "servicenow",
+            "auth": {"auth_type": "bearer", "token": "sn-token"},
+            "service_now": {
+                "instance_url": "https://example.service-now.com",
+                "record_sys_id": "abcd1234",
+                "update_work_notes": False,
+                "update_short_description": False,
+            },
+            "include_pdf": False,
+            "include_json": False,
+            "include_html": False,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "ServiceNow export must attach at least one artifact or update work notes/short description."
+
+
 def test_export_review_to_servicenow_rejects_basic_auth_without_password():
     response = client.post(
         "/api/export/review",
@@ -750,3 +812,36 @@ def test_export_review_to_servicenow_rejects_invalid_instance_url():
 
     assert response.status_code == 400
     assert "service_now.instance_url" in response.json()["detail"]
+
+
+def test_export_review_rejects_blank_destination_identifiers():
+    jira_response = client.post(
+        "/api/export/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "target": "jira",
+            "auth": {"auth_type": "bearer", "token": "jira-token"},
+            "jira": {"base_url": "https://example.atlassian.net", "issue_key": "   "},
+        },
+    )
+
+    assert jira_response.status_code == 422
+    assert jira_response.json()["detail"][0]["loc"][-1] == "issue_key"
+
+    servicenow_response = client.post(
+        "/api/export/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "target": "servicenow",
+            "auth": {"auth_type": "bearer", "token": "sn-token"},
+            "service_now": {
+                "instance_url": "https://example.service-now.com",
+                "record_sys_id": "   "
+            },
+        },
+    )
+
+    assert servicenow_response.status_code == 422
+    assert servicenow_response.json()["detail"][0]["loc"][-1] == "record_sys_id"
