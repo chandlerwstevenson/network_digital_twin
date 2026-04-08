@@ -1,0 +1,3552 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimesh Config Studio</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a2b;
+      --panel-2: #182338;
+      --text: #e8eefc;
+      --muted: #9fb0d1;
+      --border: #263555;
+      --accent: #6ea8fe;
+      --good: #4dd4ac;
+      --warn: #f7c66b;
+      --bad: #ff7b8b;
+      --info: #8ab4ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(180deg, #09101d 0%, #0e1628 100%);
+      color: var(--text);
+    }
+    .app { max-width: 1440px; margin: 0 auto; padding: 24px; display: grid; gap: 20px; }
+    .hero { display: flex; justify-content: space-between; gap: 16px; align-items: end; flex-wrap: wrap; }
+    .hero h1 { margin: 0 0 6px; font-size: 32px; }
+    .hero p { margin: 0; color: var(--muted); max-width: 900px; }
+    .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+    .panel { background: rgba(18, 26, 43, 0.92); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: 0 10px 35px rgba(0,0,0,.25); }
+    .panel h2, .panel h3 { margin-top: 0; }
+    .muted { color: var(--muted); }
+    textarea, input, select { width: 100%; background: #0c1323; color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; }
+    textarea { min-height: 240px; resize: vertical; }
+    .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+    .row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    button { border: 0; border-radius: 12px; padding: 11px 16px; font: inherit; font-weight: 600; cursor: pointer; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+    button.primary { background: var(--accent); color: #081120; }
+    button:hover { filter: brightness(1.06); }
+    .chips { display: flex; gap: 10px; flex-wrap: wrap; }
+    .chip { padding: 8px 10px; border-radius: 999px; background: #0d1628; border: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .stat { background: #0d1628; border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+    .stat .label { color: var(--muted); font-size: 13px; }
+    .stat .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+    .finding { border: 1px solid var(--border); border-left: 5px solid var(--info); border-radius: 12px; padding: 12px 14px; background: #0d1628; margin-bottom: 12px; }
+    .finding.critical { border-left-color: var(--bad); }
+    .finding.warning { border-left-color: var(--warn); }
+    .finding.info { border-left-color: var(--info); }
+    .finding h4 { margin: 0 0 8px; }
+    .finding p { margin: 6px 0; }
+    .finding pre { white-space: pre-wrap; background: #09101d; border: 1px solid var(--border); border-radius: 10px; padding: 10px; overflow-x: auto; }
+    .split { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .badge.critical { background: rgba(255,123,139,.16); color: var(--bad); }
+    .badge.warning { background: rgba(247,198,107,.16); color: var(--warn); }
+    .badge.info { background: rgba(138,180,255,.16); color: var(--info); }
+    .status.pass { color: var(--good); }
+    .status.fail { color: var(--bad); }
+    .list { margin: 8px 0 0; padding-left: 18px; }
+    .toolbar-note { margin-top: 10px; color: var(--muted); font-size: 13px; }
+    .history-list { display: grid; gap: 10px; margin-top: 12px; }
+    .history-item { border: 1px solid var(--border); border-radius: 12px; background: #0d1628; padding: 12px; }
+    .history-item button { margin-top: 10px; }
+    .history-meta { color: var(--muted); font-size: 12px; }
+    .config-viewer-shell { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: #09101d; }
+    .config-viewer-toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border); background: #0d1628; flex-wrap: wrap; }
+    .config-viewer { max-height: 480px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; }
+    .config-line { display: grid; grid-template-columns: 68px 1fr; gap: 12px; padding: 3px 14px; white-space: pre-wrap; }
+    .config-line:hover { background: rgba(255,255,255,0.03); }
+    .config-line.selected { background: rgba(110,168,254,0.12); }
+    .config-line.selected .config-line-number { color: var(--accent); }
+    .config-line.focus { background: rgba(77,212,172,0.12); }
+    .config-line.focus .config-line-number { color: var(--good); }
+    .config-line-number { color: var(--muted); text-align: right; user-select: none; }
+    .config-line-text { overflow-wrap: anywhere; }
+    .finding-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .worklist-summary { display: grid; gap: 12px; }
+    .worklist-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .worklist-item { border: 1px solid var(--border); border-radius: 12px; background: #0d1628; padding: 12px; }
+    .worklist-item.done { opacity: 0.72; }
+    .worklist-item-header { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+    .worklist-meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    .mini-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--border); background: #09101d; color: var(--muted); font-size: 12px; }
+    .change-plan-card { border: 1px solid var(--border); border-radius: 12px; background: #09101d; padding: 12px; margin-top: 12px; }
+    .change-plan-card pre { white-space: pre-wrap; background: #050b16; border: 1px solid var(--border); border-radius: 10px; padding: 10px; overflow-x: auto; }
+    .template-builder-grid { display: grid; grid-template-columns: 1.2fr .9fr; gap: 18px; }
+    .template-rule-card, .template-version-card { border: 1px solid var(--border); border-radius: 12px; background: #0d1628; padding: 12px; margin-top: 10px; }
+    .template-rule-card pre, .template-version-card pre { white-space: pre-wrap; background: #09101d; border: 1px solid var(--border); border-radius: 10px; padding: 10px; overflow-x: auto; }
+    button.secondary-action { background: #0d1628; }
+    @media (max-width: 1100px) { .grid, .split, .stats, .row, .row-3 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="hero">
+      <div>
+        <h1>Optimesh Config Studio</h1>
+        <p>
+          Review network configs in one workspace: analyze a single device, triage a ZIP batch, compare running vs startup,
+          ask natural-language questions, and attach results directly to Jira or ServiceNow.
+        </p>
+      </div>
+      <div class="chips">
+        <div class="chip">Paste-to-review</div>
+        <div class="chip">File upload</div>
+        <div class="chip">Snippet mode</div>
+        <div class="chip">Quick-pass</div>
+        <div class="chip">Running vs startup compare</div>
+        <div class="chip">Natural-language query</div>
+        <div class="chip">JSON / PDF export</div>
+        <div class="chip">Multi-device correlation</div>
+        <div class="chip">Batch ZIP review</div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Review workspace</h2>
+        <p class="muted">No device access required. Paste config text or upload a file to generate a review, change script, and export-ready handoff.</p>
+
+        <div class="row-3">
+          <label>
+            <span class="muted">Vendor override</span>
+            <select id="vendor">
+              <option value="">Auto-detect</option>
+              <option value="cisco_ios">Cisco IOS</option>
+              <option value="cisco_iosxe">Cisco IOS-XE</option>
+              <option value="junos">JunOS</option>
+            </select>
+          </label>
+          <label>
+            <span class="muted">Context hint</span>
+            <select id="contextHint">
+              <option value="">None</option>
+              <option value="interface">Interface</option>
+              <option value="router_bgp">BGP neighbor stanza</option>
+              <option value="router_ospf">OSPF section</option>
+              <option value="acl">ACL</option>
+              <option value="route_map">Route-map</option>
+            </select>
+          </label>
+          <label>
+            <span class="muted">Engineer name</span>
+            <input id="engineerName" placeholder="Engineer / reviewer name" />
+          </label>
+          <label>
+            <span class="muted">Applied template</span>
+            <select id="starterTemplate">
+              <option value="">Platform baseline review</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <label><input id="quickPass" type="checkbox" /> Quick-pass mode</label>
+          <label><input id="forceSnippet" type="checkbox" /> Force snippet mode</label>
+        </div>
+
+        <label>
+          <span class="muted">Upload config file</span>
+          <input id="configFile" type="file" accept=".txt,.conf,.cfg,.log,.config,.cnf,.bak,text/plain" />
+        </label>
+        <div class="toolbar-note">Use this for a fast single-device review when you already have one config ready. Common config/export suffixes are accepted, and the intake panel below warns before you try to analyze an oversized or suspicious file before it ever reaches analysis.</div>
+        <div id="fileUploadState" class="muted" style="margin-top: 12px;">No config file loaded yet.</div>
+
+        <label style="margin-top: 12px; display:block;">
+          <span class="muted">Batch ZIP upload</span>
+          <input id="batchZipFile" type="file" accept=".zip,application/zip" />
+        </label>
+        <div class="actions">
+          <button id="batchReviewBtn">Review ZIP batch</button>
+        </div>
+        <div class="toolbar-note">Upload a ZIP for one-session bulk review. If the archive contains 2-10 configs, Config Studio also runs cross-device correlation automatically.</div>
+
+        <label style="margin-top: 12px; display:block;">
+          <span class="muted">Config text</span>
+          <textarea id="configText" placeholder="Paste running-config, startup-config, or a snippet here..."></textarea>
+        </label>
+
+        <div class="actions">
+          <button class="primary" id="analyzeBtn">Analyze config</button>
+          <button id="loadSampleBtn">Load sample</button>
+          <button id="exportJsonBtn">Export JSON</button>
+          <button id="exportPdfBtn">Export PDF</button>
+          <button id="clearBtn">Clear</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Analysis summary</h2>
+        <div id="summaryState" class="muted">No review yet.</div>
+        <div id="stats" class="stats" style="display:none; margin-top: 14px;"></div>
+        <div id="reportHeaderPanel" style="margin-top:14px;"></div>
+        <div id="quickPassPanel" style="margin-top:14px;"></div>
+        <div id="templateCompliancePanel" style="margin-top:14px;"></div>
+        <div id="changeScriptPanel" style="margin-top:14px;"></div>
+        <div id="worklistPanel" style="margin-top:14px;"></div>
+        <div id="exportPanel" style="margin-top:14px;"></div>
+        <div id="batchWorkspaceNavigator" style="margin-top:14px;"></div>
+        <div id="snippetInfo" style="margin-top: 14px;"></div>
+        <div id="queryPanel" style="margin-top: 18px; display:none;">
+          <h3>Natural language query</h3>
+          <p class="muted">Ask questions about the current config with line references.</p>
+          <div class="row">
+            <input id="questionInput" placeholder="e.g. Which interfaces have no inbound ACL?" />
+            <button id="askBtn">Ask</button>
+          </div>
+          <div id="queryAnswer" class="finding info" style="display:none;"></div>
+          <div id="queryHistoryPanel" style="margin-top: 14px;"></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Template authoring</h2>
+      <p class="muted">Build org-specific checks without writing code, then save immutable template versions so every review can point back to the exact standard in force at review time.</p>
+      <div class="template-builder-grid">
+        <div>
+          <div class="row">
+            <label>
+              <span class="muted">Template name</span>
+              <input id="templateNameInput" placeholder="e.g. Branch router baseline" />
+            </label>
+            <label>
+              <span class="muted">Rule severity</span>
+              <select id="templateRuleSeverity">
+                <option value="critical">Critical</option>
+                <option value="warning" selected>Warning</option>
+                <option value="info">Informational</option>
+              </select>
+            </label>
+          </div>
+          <div class="row-3">
+            <label>
+              <span class="muted">Rule type</span>
+              <select id="templateRuleType">
+                <option value="required_command">Required command</option>
+                <option value="banned_command">Banned command</option>
+                <option value="required_value">Required value</option>
+                <option value="naming_convention">Naming convention</option>
+                <option value="structural">Structural rule</option>
+              </select>
+            </label>
+            <label>
+              <span class="muted">Section / scope</span>
+              <select id="templateRuleSection">
+                <option value="">Global</option>
+                <option value="interface">Interface</option>
+                <option value="router bgp">Router BGP</option>
+                <option value="router ospf">Router OSPF</option>
+                <option value="line vty">VTY lines</option>
+                <option value="vlan">VLAN</option>
+              </select>
+            </label>
+            <label>
+              <span class="muted">Expected value</span>
+              <input id="templateRuleExpectedValue" placeholder="e.g. 15 or scrypt" />
+            </label>
+          </div>
+          <div class="row">
+            <label>
+              <span class="muted">Rule label</span>
+              <input id="templateRuleName" placeholder="e.g. NTP required on all routers" />
+            </label>
+            <label>
+              <span class="muted">Command / pattern</span>
+              <input id="templateRulePattern" placeholder="e.g. ntp server / transport input telnet / SITE-ROLE-PORT" />
+            </label>
+          </div>
+          <label>
+            <span class="muted">Guidance / rule description</span>
+            <textarea id="templateRuleDescription" style="min-height: 96px;" placeholder="Why this rule exists and what the engineer should enforce."></textarea>
+          </label>
+          <label style="margin-top: 12px; display:block;">
+            <span class="muted">Only for structural rules: apply when this condition matches inside the section</span>
+            <input id="templateRuleCondition" placeholder="e.g. switchport mode trunk" />
+          </label>
+          <div class="actions">
+            <button id="templateAddRuleBtn" class="primary">Add rule to draft</button>
+            <button id="templateSaveVersionBtn">Save immutable version</button>
+            <button id="templateLoadStarterBtn">Start from selected starter</button>
+            <button id="templateClearDraftBtn">Clear draft</button>
+          </div>
+          <div class="toolbar-note">The builder converts simple form inputs into template rules for the engine. Every saved version is immutable and can be referenced directly in a report.</div>
+          <div id="templateDraftPanel" style="margin-top: 14px;"></div>
+        </div>
+        <div>
+          <div id="templateVersionPanel"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Findings</h2>
+      <div class="row">
+        <label>
+          <span class="muted">Severity view</span>
+          <select id="severityFilter">
+            <option value="all">All findings</option>
+            <option value="critical">Critical only</option>
+            <option value="warning">Warning + critical</option>
+            <option value="info">Info only</option>
+          </select>
+        </label>
+        <div class="muted" style="display:flex; align-items:end;">Use quick-pass for a fast go / no-go read, then switch back to the full review when you need the detail.</div>
+      </div>
+      <div class="toolbar-note">Severity filter is remembered for this browser session so engineers can keep the same threshold during a change window.</div>
+      <div id="findingsList" class="muted">Run an analysis to see findings.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Config navigator</h2>
+      <p class="muted">Operator workflow fix: jump from any finding straight to the exact lines in the submitted config, keep the relevant block highlighted, and copy remediation without hunting.</p>
+      <div id="navigatorState" class="muted">Run an analysis to load a line-numbered config view.</div>
+      <div id="configNavigator"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Batch review</h2>
+      <p class="muted">Bulk-review a ZIP of configs in one session, then triage which devices passed, failed, or need immediate attention.</p>
+      <div id="batchReviewResults" class="muted">No batch review yet.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Multi-config correlation</h2>
+      <p class="muted">Submit 2 configs, catch cross-device mismatches, then ask questions across both devices without grepping by hand.</p>
+      <div class="split">
+        <label>
+          <span class="muted">Config A</span>
+          <textarea id="multiConfigA" placeholder="Paste first device config..."></textarea>
+        </label>
+        <label>
+          <span class="muted">Config B</span>
+          <textarea id="multiConfigB" placeholder="Paste second device config..."></textarea>
+        </label>
+      </div>
+      <div class="actions">
+        <button class="primary" id="correlateBtn">Run cross-config review</button>
+      </div>
+      <div id="correlateResults" class="muted" style="margin-top: 14px;">No cross-config review yet.</div>
+      <div style="margin-top: 18px;">
+        <h3>Cross-config query</h3>
+        <p class="muted">Ask questions like “Which devices have OSPF area 0?” or “Where is VLAN 100 referenced?” across both pasted configs.</p>
+        <div class="row">
+          <input id="multiQuestionInput" placeholder="e.g. Which devices have OSPF area 0 configured?" />
+          <button id="askMultiBtn">Ask across configs</button>
+        </div>
+        <div id="multiQueryAnswer" class="finding info" style="display:none; margin-top: 12px;"></div>
+        <div id="multiQueryHistoryPanel" style="margin-top: 14px;"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Running vs startup compare</h2>
+      <p class="muted">Highlight commands that will be lost on reload so you can catch “worked until reboot” issues before the maintenance window ends.</p>
+      <div class="split">
+        <label>
+          <span class="muted">Running config</span>
+          <textarea id="runningConfig" placeholder="Paste running-config..."></textarea>
+        </label>
+        <label>
+          <span class="muted">Startup config</span>
+          <textarea id="startupConfig" placeholder="Paste startup-config..."></textarea>
+        </label>
+      </div>
+      <div class="actions">
+        <button class="primary" id="compareBtn">Compare configs</button>
+      </div>
+      <div id="compareResults" class="muted" style="margin-top: 14px;">No comparison yet.</div>
+    </section>
+  </div>
+
+  <script>
+    const ENGINE_API_KEY = 'dev-engine-key';
+    const SESSION_STORAGE_KEYS = {
+      severityFilter: 'configStudio.severityFilter',
+      queryHistory: 'configStudio.queryHistory',
+      multiQueryHistory: 'configStudio.multiQueryHistory',
+      findingSelections: 'configStudio.findingSelections',
+      exportPrefs: 'configStudio.exportPrefs',
+      batchProgress: 'configStudio.batchProgress',
+      exportHistory: 'configStudio.exportHistory',
+    };
+    const LOCAL_STORAGE_KEYS = {
+      customTemplates: 'configStudio.customTemplates',
+      exportPresets: 'configStudio.exportPresets',
+    };
+    let currentReview = null;
+    let currentBatchReview = null;
+    let starterTemplates = [];
+    let customTemplates = [];
+    let exportPresets = [];
+    let templateDraftRules = [];
+    let currentFocusRange = null;
+    let currentWorklistState = {};
+    const MAX_SINGLE_CONFIG_BYTES = 2 * 1024 * 1024;
+    const SUPPORTED_SINGLE_CONFIG_SUFFIXES = ['.txt.bak', '.txt', '.conf', '.cfg', '.log', '.config', '.cnf', '.bak'];
+
+    async function getEngineBaseUrl() {
+      if (window.electronAPI?.getEngineUrl) return await window.electronAPI.getEngineUrl();
+      return 'http://127.0.0.1:8000';
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+    }
+
+    function formatBytes(bytes) {
+      const value = Number(bytes || 0);
+      if (!Number.isFinite(value) || value <= 0) return '0 B';
+      if (value < 1024) return `${value} B`;
+      if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+      return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function getFilenameSuffix(name = '') {
+      const normalized = String(name || '').trim().toLowerCase();
+      return SUPPORTED_SINGLE_CONFIG_SUFFIXES.find(suffix => normalized.endsWith(suffix)) || '';
+    }
+
+    function looksLikeNetworkConfigText(text = '') {
+      const lines = String(text || '').split(/\r?\n/).map(line => line.trim().toLowerCase()).filter(Boolean);
+      if (!lines.length) return false;
+      const tokens = [
+        'hostname ',
+        'interface ',
+        'router ',
+        'ip route',
+        'ip access-list',
+        'line vty',
+        'snmp-server',
+        'vlan ',
+        'set interfaces',
+        'set protocols',
+        'set system',
+        'system {',
+        'interfaces {',
+        'protocols {',
+        'firewall {',
+      ];
+      const head = lines.slice(0, 40);
+      if (head.some(line => tokens.some(token => line.includes(token)))) return true;
+      const punctuationHeavy = head.filter(line => line.endsWith(';') || line.endsWith('{') || line === '!').length;
+      return punctuationHeavy >= 3;
+    }
+
+    function analyzeSingleConfigFile(file, text, bytes) {
+      const suffix = getFilenameSuffix(file?.name || '');
+      const lineCount = text ? text.split(/\r?\n/).length : 0;
+      const nullByteCount = Array.from((bytes || new Uint8Array()).slice(0, 4096)).filter(byte => byte === 0).length;
+      const replacementCount = (text.match(/\uFFFD/g) || []).length;
+      const warnings = [];
+      const blocking = [];
+
+      if (!file?.size) blocking.push('The selected file is empty. Choose a config export with actual device text.');
+      if (file?.size > MAX_SINGLE_CONFIG_BYTES) blocking.push(`This file is ${formatBytes(file.size)}, which exceeds the 2 MB single-config limit from REQ-3.1.2.`);
+      if (nullByteCount > 0) blocking.push('This file contains binary/NUL bytes in the header and does not look like a plain-text config export.');
+      if (replacementCount > 24 && replacementCount / Math.max(text.length, 1) > 0.0025) warnings.push('Some characters could not be decoded cleanly. Review the loaded text before analyzing.');
+      if (!suffix) warnings.push('Filename suffix is unusual for a config export. Config Studio can still load it, but confirm this is the right file.');
+      if (text && !looksLikeNetworkConfigText(text)) warnings.push('Loaded text does not obviously look like a network config. If this is a README, checklist, or show-command dump, results may be noisy.');
+
+      return {
+        suffix,
+        lineCount,
+        warnings,
+        blocking,
+        canLoad: !blocking.length,
+      };
+    }
+
+    function renderSingleConfigFileState(state = null) {
+      const panel = document.getElementById('fileUploadState');
+      if (!panel) return;
+      if (!state) {
+        panel.className = 'muted';
+        panel.innerHTML = 'No config file loaded yet.';
+        return;
+      }
+      const tone = state.blocking.length ? 'critical' : state.warnings.length ? 'warning' : 'info';
+      panel.className = '';
+      panel.innerHTML = `
+        <div class="finding ${tone}" style="margin: 0;">
+          <h4>Single-file intake</h4>
+          <p><strong>${escapeHtml(state.file.name || 'Unnamed file')}</strong> · ${escapeHtml(formatBytes(state.file.size || 0))}${state.suffix ? ` · suffix ${escapeHtml(state.suffix)}` : ''} · ${state.lineCount} line${state.lineCount === 1 ? '' : 's'}</p>
+          <p><strong>Workspace status:</strong> ${state.canLoad ? 'loaded into the config workspace and ready for analysis' : 'not loaded into the config workspace yet'}</p>
+          ${state.blocking.length ? `<p><strong>Fix before analyzing</strong></p><ul>${state.blocking.map(message => `<li>${escapeHtml(message)}</li>`).join('')}</ul>` : ''}
+          ${state.warnings.length ? `<p><strong>Operator heads-up</strong></p><ul>${state.warnings.map(message => `<li>${escapeHtml(message)}</li>`).join('')}</ul>` : ''}
+        </div>
+      `;
+    }
+
+    function clearSingleConfigFileState() {
+      const input = document.getElementById('configFile');
+      if (input) input.value = '';
+      renderSingleConfigFileState(null);
+    }
+
+    function isLikelyHttpUrl(value) {
+      return /^https?:\/\//i.test(String(value || '').trim());
+    }
+
+    function parseWebhookHeadersText(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return { ok: true, headers: {}, error: '' };
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+          return { ok: false, headers: {}, error: 'Webhook headers must be a JSON object of header names to values.' };
+        }
+        return { ok: true, headers: parsed, error: '' };
+      } catch {
+        return { ok: false, headers: {}, error: 'Webhook headers must be valid JSON.' };
+      }
+    }
+
+    function getWebhookHeaderRowsFromPrefs(prefs = getExportPrefs()) {
+      const parsed = parseWebhookHeadersText(prefs.webhookHeadersText);
+      if (!parsed.ok) return [{ key: '', value: '' }];
+      const entries = Object.entries(parsed.headers || {}).map(([key, value]) => ({ key, value: String(value ?? '') }));
+      return entries.length ? entries : [{ key: '', value: '' }];
+    }
+
+    function serializeWebhookHeaderRows(panel = document.getElementById('exportPanel')) {
+      if (!panel) return { jsonText: '{\n  "X-Change-System": "Config-Studio"\n}', rows: [{ key: '', value: '' }] };
+      const rows = Array.from(panel.querySelectorAll('[data-webhook-header-row]')).map(row => ({
+        key: row.querySelector('[data-webhook-header-key]')?.value.trim() || '',
+        value: row.querySelector('[data-webhook-header-value]')?.value || '',
+      }));
+      const filteredRows = rows.filter(row => row.key || row.value);
+      const headers = {};
+      filteredRows.forEach(row => {
+        if (row.key) headers[row.key] = row.value;
+      });
+      return {
+        rows: rows.length ? rows : [{ key: '', value: '' }],
+        jsonText: Object.keys(headers).length
+          ? JSON.stringify(headers, null, 2)
+          : '{\n  "X-Change-System": "Config-Studio"\n}',
+      };
+    }
+
+    function getExportReadiness(prefs = getExportPrefs()) {
+      const missing = [];
+      const notes = [];
+      const artifacts = [prefs.includePdf ? 'PDF' : '', prefs.includeJson ? 'JSON' : '', prefs.includeHtml ? 'HTML' : ''].filter(Boolean);
+      if (!artifacts.length) {
+        missing.push('Choose at least one artifact format');
+      } else {
+        notes.push(`Artifacts: ${artifacts.join(', ')}`);
+      }
+
+      if (prefs.target === 'jira') {
+        if (!prefs.jiraBaseUrl) missing.push('Enter the Jira base URL');
+        else if (!isLikelyHttpUrl(prefs.jiraBaseUrl)) missing.push('Use an http(s) Jira base URL');
+        if (!prefs.jiraIssueKey) missing.push('Enter the Jira issue key');
+        notes.push(`Comment: ${prefs.jiraAddComment ? 'will add summary comment' : 'attachments only'}`);
+      } else if (prefs.target === 'servicenow') {
+        if (!prefs.serviceNowInstanceUrl) missing.push('Enter the ServiceNow instance URL');
+        else if (!isLikelyHttpUrl(prefs.serviceNowInstanceUrl)) missing.push('Use an http(s) ServiceNow instance URL');
+        if (!prefs.serviceNowRecordSysId) missing.push('Enter the ServiceNow record sys_id');
+        notes.push(`Updates: ${prefs.serviceNowUpdateWorkNotes ? 'work notes' : 'no work notes'}${prefs.serviceNowUpdateShortDescription ? ' + short description' : ''}`);
+      } else {
+        if (!prefs.webhookUrl) missing.push('Enter the webhook URL');
+        else if (!isLikelyHttpUrl(prefs.webhookUrl)) missing.push('Use an http(s) webhook URL');
+        const parsedHeaders = parseWebhookHeadersText(prefs.webhookHeadersText);
+        if (!parsedHeaders.ok) missing.push(parsedHeaders.error);
+        notes.push(`Payload: ${prefs.webhookIncludeReviewPayload ? 'includes review payload' : 'artifacts/summary only'}`);
+        notes.push(`Artifacts in webhook: ${prefs.webhookEmbedArtifacts ? 'embedded inline' : 'not embedded inline'}`);
+      }
+
+      if (prefs.target !== 'webhook') {
+        if (prefs.authType === 'basic') {
+          if (!prefs.username) missing.push('Enter the basic-auth username');
+          if (!prefs.token) missing.push('Enter the basic-auth password');
+          notes.push('Auth: basic');
+        } else {
+          if (!prefs.token) missing.push('Enter the bearer token');
+          notes.push('Auth: bearer token');
+        }
+      } else {
+        notes.push('Auth: optional (use webhook headers if needed)');
+      }
+
+      return {
+        ready: missing.length === 0,
+        missing,
+        notes,
+        targetLabel: getExportTargetLabelFromPrefs(prefs),
+        destinationLabel: getExportDestinationLabelFromPrefs(prefs),
+      };
+    }
+
+    function renderWebhookHeaderEditor(panel, prefs = getExportPrefs()) {
+      const editor = panel?.querySelector('#webhookHeaderEditor');
+      if (!editor) return;
+      const rows = getWebhookHeaderRowsFromPrefs(prefs);
+      editor.innerHTML = rows.map((row, index) => `
+        <div class="row" data-webhook-header-row>
+          <label>
+            <span class="muted">Header name</span>
+            <input data-webhook-header-key value="${escapeHtml(row.key)}" placeholder="X-Change-System" />
+          </label>
+          <label>
+            <span class="muted">Header value</span>
+            <input data-webhook-header-value value="${escapeHtml(row.value)}" placeholder="Config-Studio" />
+          </label>
+          <div style="display:flex; align-items:end; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="secondary-action" data-webhook-header-add="${index}">Add header</button>
+            <button type="button" class="secondary-action" data-webhook-header-remove="${index}" ${rows.length === 1 ? 'disabled' : ''}>Remove</button>
+          </div>
+        </div>
+      `).join('');
+
+      const syncEditorState = () => {
+        const serialized = serializeWebhookHeaderRows(panel);
+        const textarea = panel.querySelector('#webhookHeadersText');
+        if (textarea) textarea.value = serialized.jsonText;
+        saveExportPrefsFromPanel();
+      };
+
+      editor.querySelectorAll('[data-webhook-header-key], [data-webhook-header-value]').forEach(input => {
+        input.addEventListener('input', syncEditorState);
+        input.addEventListener('change', syncEditorState);
+      });
+
+      editor.querySelectorAll('[data-webhook-header-add]').forEach(button => {
+        button.addEventListener('click', () => {
+          const serialized = serializeWebhookHeaderRows(panel);
+          serialized.rows.splice(Number(button.dataset.webhookHeaderAdd) + 1, 0, { key: '', value: '' });
+          const headers = Object.fromEntries(serialized.rows.filter(row => row.key).map(row => [row.key, row.value]));
+          panel.querySelector('#webhookHeadersText').value = Object.keys(headers).length
+            ? JSON.stringify(headers, null, 2)
+            : '{\n  "X-Change-System": "Config-Studio"\n}';
+          renderWebhookHeaderEditor(panel, { ...getExportPrefs(), webhookHeadersText: panel.querySelector('#webhookHeadersText').value });
+          saveExportPrefsFromPanel();
+        });
+      });
+
+      editor.querySelectorAll('[data-webhook-header-remove]').forEach(button => {
+        button.addEventListener('click', () => {
+          const serialized = serializeWebhookHeaderRows(panel);
+          serialized.rows.splice(Number(button.dataset.webhookHeaderRemove), 1);
+          const nextRows = serialized.rows.length ? serialized.rows : [{ key: '', value: '' }];
+          const headers = Object.fromEntries(nextRows.filter(row => row.key).map(row => [row.key, row.value]));
+          panel.querySelector('#webhookHeadersText').value = Object.keys(headers).length
+            ? JSON.stringify(headers, null, 2)
+            : '{\n  "X-Change-System": "Config-Studio"\n}';
+          renderWebhookHeaderEditor(panel, { ...getExportPrefs(), webhookHeadersText: panel.querySelector('#webhookHeadersText').value });
+          saveExportPrefsFromPanel();
+        });
+      });
+    }
+
+    async function buildBatchReviewErrorMessage(res) {
+      const fallback = `Batch review failed with ${res.status}`;
+      let bodyText = '';
+      try {
+        bodyText = await res.text();
+      } catch (err) {
+        return fallback;
+      }
+      if (!bodyText) return fallback;
+      try {
+        const parsed = JSON.parse(bodyText);
+        if (typeof parsed?.detail === 'string') return parsed.detail;
+      } catch (err) {
+        // keep original text below
+      }
+      return bodyText;
+    }
+
+    function downloadBlob(filename, blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadJson(filename, data) {
+      downloadBlob(filename, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    }
+
+    function downloadText(filename, text) {
+      downloadBlob(filename, new Blob([String(text)], { type: 'text/plain;charset=utf-8' }));
+    }
+
+    async function fileToBase64(file) {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+      }
+      return btoa(binary);
+    }
+
+    function persistCustomTemplates() {
+      savePersistentValue(LOCAL_STORAGE_KEYS.customTemplates, customTemplates);
+    }
+
+    function buildGuidedRuleFromForm() {
+      const type = document.getElementById('templateRuleType').value;
+      const section = document.getElementById('templateRuleSection').value || null;
+      const severity = document.getElementById('templateRuleSeverity').value;
+      const name = document.getElementById('templateRuleName').value.trim();
+      const description = document.getElementById('templateRuleDescription').value.trim();
+      const patternInput = document.getElementById('templateRulePattern').value.trim();
+      const expectedValue = document.getElementById('templateRuleExpectedValue').value.trim() || null;
+      const condition = document.getElementById('templateRuleCondition').value.trim() || null;
+
+      if (!name || !description || !patternInput) {
+        throw new Error('Template rules need a name, guidance, and command/pattern.');
+      }
+
+      let pattern = patternInput;
+      if (type === 'required_command' || type === 'banned_command') {
+        pattern = patternInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+      }
+
+      return {
+        id: crypto.randomUUID(),
+        name,
+        description,
+        rule_type: type,
+        severity,
+        pattern,
+        section,
+        expected_value: expectedValue,
+        condition,
+      };
+    }
+
+    function renderTemplateDraft() {
+      const panel = document.getElementById('templateDraftPanel');
+      if (!templateDraftRules.length) {
+        panel.innerHTML = '<div class="finding info"><h4>Draft template</h4><p>No draft rules yet. Add one with the guided builder above.</p></div>';
+        return;
+      }
+      panel.innerHTML = `
+        <div class="finding info">
+          <h4>Draft template</h4>
+          <p><strong>${templateDraftRules.length}</strong> rule${templateDraftRules.length === 1 ? '' : 's'} ready for the next version.</p>
+          ${templateDraftRules.map((rule, index) => `
+            <div class="template-rule-card">
+              <div class="worklist-item-header">
+                <div>
+                  <strong>${escapeHtml(rule.name)}</strong>
+                  <div class="worklist-meta">${escapeHtml(rule.rule_type)} · ${escapeHtml(rule.section || 'global')} · ${escapeHtml(rule.severity)}</div>
+                </div>
+                <button class="secondary-action" data-template-remove-rule-index="${index}">Remove</button>
+              </div>
+              <p>${escapeHtml(rule.description)}</p>
+              <pre>${escapeHtml(JSON.stringify(rule, null, 2))}</pre>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      panel.querySelectorAll('[data-template-remove-rule-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          templateDraftRules.splice(Number(button.dataset.templateRemoveRuleIndex), 1);
+          renderTemplateDraft();
+        });
+      });
+    }
+
+    function renderTemplateVersions() {
+      const panel = document.getElementById('templateVersionPanel');
+      if (!customTemplates.length) {
+        panel.innerHTML = '<div class="finding info"><h4>Saved template versions</h4><p>No custom templates saved yet. Save a draft to create an immutable version history.</p></div>';
+        refreshTemplateOptions();
+        return;
+      }
+
+      panel.innerHTML = `
+        <div class="finding info">
+          <h4>Saved template versions</h4>
+          <p>${customTemplates.length} custom template line${customTemplates.length === 1 ? '' : 's'} stored in this browser.</p>
+          ${customTemplates.map((template, templateIndex) => `
+            <div class="template-version-card">
+              <div class="worklist-item-header">
+                <div>
+                  <strong>${escapeHtml(template.name)}</strong>
+                  <div class="worklist-meta">${template.versions.length} immutable version${template.versions.length === 1 ? '' : 's'}</div>
+                </div>
+                <button class="secondary-action" data-template-delete-index="${templateIndex}">Delete template</button>
+              </div>
+              ${template.versions.slice().reverse().map((version, versionIndexFromEnd) => {
+                const versionIndex = template.versions.length - 1 - versionIndexFromEnd;
+                return `
+                  <div class="template-rule-card">
+                    <div class="worklist-item-header">
+                      <div>
+                        <strong>${escapeHtml(version.version)}</strong>
+                        <div class="worklist-meta">${escapeHtml(version.createdAt)} · ${version.rules.length} rule${version.rules.length === 1 ? '' : 's'}</div>
+                      </div>
+                      <span class="mini-pill">immutable</span>
+                    </div>
+                    <div class="worklist-actions">
+                      <button class="secondary-action" data-template-use-template-index="${templateIndex}" data-template-use-version-index="${versionIndex}">Use for review</button>
+                      <button class="secondary-action" data-template-load-template-index="${templateIndex}" data-template-load-version-index="${versionIndex}">Load into draft</button>
+                      <button class="secondary-action" data-template-export-template-index="${templateIndex}" data-template-export-version-index="${versionIndex}">Export JSON</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      panel.querySelectorAll('[data-template-delete-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          customTemplates.splice(Number(button.dataset.templateDeleteIndex), 1);
+          persistCustomTemplates();
+          renderTemplateVersions();
+        });
+      });
+
+      panel.querySelectorAll('[data-template-use-template-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          document.getElementById('starterTemplate').value = `custom:${button.dataset.templateUseTemplateIndex}:${button.dataset.templateUseVersionIndex}`;
+        });
+      });
+
+      panel.querySelectorAll('[data-template-load-template-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const template = customTemplates[Number(button.dataset.templateLoadTemplateIndex)];
+          const version = template?.versions?.[Number(button.dataset.templateLoadVersionIndex)];
+          if (!template || !version) return;
+          document.getElementById('templateNameInput').value = template.name;
+          templateDraftRules = JSON.parse(JSON.stringify(version.rules || []));
+          renderTemplateDraft();
+        });
+      });
+
+      panel.querySelectorAll('[data-template-export-template-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const template = customTemplates[Number(button.dataset.templateExportTemplateIndex)];
+          const version = template?.versions?.[Number(button.dataset.templateExportVersionIndex)];
+          if (!template || !version) return;
+          downloadJson(`${template.name.replace(/\s+/g, '-').toLowerCase()}-${version.version}.json`, {
+            name: template.name,
+            version: version.version,
+            rules: version.rules,
+          });
+        });
+      });
+
+      refreshTemplateOptions();
+    }
+
+    function refreshTemplateOptions() {
+      const select = document.getElementById('starterTemplate');
+      const existingValue = select.value;
+      const starterOptions = starterTemplates.map(t => `<option value="starter:${t.key}">${t.name} (${t.version || 'starter-v1'})</option>`).join('');
+      const customOptions = customTemplates.flatMap((template, templateIndex) => (
+        template.versions.map((version, versionIndex) => `<option value="custom:${templateIndex}:${versionIndex}">${template.name} — ${version.version}</option>`)
+      )).join('');
+      select.innerHTML = `
+        <option value="">Default review only</option>
+        ${starterOptions ? `<optgroup label="Starter templates">${starterOptions}</optgroup>` : ''}
+        ${customOptions ? `<optgroup label="Custom versions">${customOptions}</optgroup>` : ''}
+      `;
+      if ([...select.options].some(option => option.value === existingValue)) {
+        select.value = existingValue;
+      }
+    }
+
+    function getSelectedTemplate() {
+      const value = document.getElementById('starterTemplate').value;
+      if (!value) return null;
+      const [kind, a, b] = value.split(':');
+      if (kind === 'starter') return starterTemplates.find(t => t.key === a) || null;
+      if (kind === 'custom') {
+        const template = customTemplates[Number(a)];
+        const version = template?.versions?.[Number(b)];
+        if (!template || !version) return null;
+        return { key: `${template.name}:${version.version}`, name: template.name, version: version.version, rules: version.rules };
+      }
+      return null;
+    }
+
+    async function loadStarterTemplates() {
+      const base = await getEngineBaseUrl();
+      const res = await fetch(`${base}/api/templates/starter`, {
+        headers: { 'x-api-key': ENGINE_API_KEY },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      starterTemplates = data.templates || [];
+      refreshTemplateOptions();
+    }
+
+    function loadSessionValue(key, fallback) {
+      try {
+        const raw = window.sessionStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function saveSessionValue(key, value) {
+      try {
+        window.sessionStorage.setItem(key, JSON.stringify(value));
+      } catch {
+        // best effort only
+      }
+    }
+
+    function loadPersistentValue(key, fallback) {
+      try {
+        const raw = window.localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function savePersistentValue(key, value) {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+      } catch {
+        // best effort only
+      }
+    }
+
+    function getHistoryEntries(storageKey) {
+      return loadSessionValue(storageKey, []);
+    }
+
+    function rememberHistoryEntry(storageKey, entry, renderFn) {
+      const updated = [entry, ...getHistoryEntries(storageKey)].slice(0, 20);
+      saveSessionValue(storageKey, updated);
+      renderFn();
+    }
+
+    function clearHistoryEntries(storageKey, renderFn) {
+      saveSessionValue(storageKey, []);
+      renderFn();
+    }
+
+    function getQueryHistory() {
+      return getHistoryEntries(SESSION_STORAGE_KEYS.queryHistory);
+    }
+
+    function getMultiQueryHistory() {
+      return getHistoryEntries(SESSION_STORAGE_KEYS.multiQueryHistory);
+    }
+
+    function rememberQuery(entry) {
+      rememberHistoryEntry(SESSION_STORAGE_KEYS.queryHistory, entry, renderQueryHistory);
+    }
+
+    function rememberMultiQuery(entry) {
+      rememberHistoryEntry(SESSION_STORAGE_KEYS.multiQueryHistory, entry, renderMultiQueryHistory);
+    }
+
+    function restoreSessionPreferences() {
+      const savedSeverity = loadSessionValue(SESSION_STORAGE_KEYS.severityFilter, 'all');
+      document.getElementById('severityFilter').value = savedSeverity;
+      customTemplates = loadPersistentValue(LOCAL_STORAGE_KEYS.customTemplates, []);
+      exportPresets = loadPersistentValue(LOCAL_STORAGE_KEYS.exportPresets, []);
+      renderQueryHistory();
+      renderMultiQueryHistory();
+      renderTemplateDraft();
+      renderTemplateVersions();
+    }
+
+    function getDefaultExportPrefs() {
+      return {
+        target: 'jira',
+        authType: 'bearer',
+        jiraBaseUrl: '',
+        jiraIssueKey: '',
+        jiraAddComment: true,
+        serviceNowInstanceUrl: '',
+        serviceNowTableName: 'change_request',
+        serviceNowRecordSysId: '',
+        serviceNowUpdateWorkNotes: true,
+        serviceNowUpdateShortDescription: false,
+        webhookUrl: '',
+        webhookHeadersText: '{\n  "X-Change-System": "Config-Studio"\n}',
+        webhookIncludeReviewPayload: true,
+        webhookEmbedArtifacts: false,
+        username: '',
+        token: '',
+        attachmentPrefix: 'config-studio-review',
+        includePdf: true,
+        includeJson: true,
+        includeHtml: false,
+        exportComment: '',
+      };
+    }
+
+    function getExportPrefs() {
+      return { ...getDefaultExportPrefs(), ...loadSessionValue(SESSION_STORAGE_KEYS.exportPrefs, {}) };
+    }
+
+    function getExportPresets() {
+      return Array.isArray(exportPresets) ? exportPresets : [];
+    }
+
+    function persistExportPresets() {
+      savePersistentValue(LOCAL_STORAGE_KEYS.exportPresets, getExportPresets());
+    }
+
+    function getExportPresetSummary(preset) {
+      if (!preset) return 'Unknown preset';
+      if (preset.target === 'servicenow') {
+        return `${preset.serviceNowInstanceUrl || 'ServiceNow instance'} · ${preset.serviceNowTableName || 'change_request'} · ${preset.serviceNowRecordSysId || 'record not set'}`;
+      }
+      if (preset.target === 'webhook') {
+        return `${preset.webhookUrl || 'Webhook URL not set'}${preset.webhookIncludeReviewPayload ? ' · includes review payload' : ''}`;
+      }
+      return `${preset.jiraBaseUrl || 'Jira site'} · ${preset.jiraIssueKey || 'issue not set'}`;
+    }
+
+    function loadExportPresetById(presetId, { rerender = true } = {}) {
+      const preset = getExportPresets().find(item => item.id === presetId);
+      if (!preset) {
+        throw new Error('That export preset no longer exists.');
+      }
+      const nextPrefs = { ...getDefaultExportPrefs(), ...preset };
+      delete nextPrefs.id;
+      delete nextPrefs.name;
+      delete nextPrefs.createdAt;
+      delete nextPrefs.updatedAt;
+      saveSessionValue(SESSION_STORAGE_KEYS.exportPrefs, nextPrefs);
+      if (rerender && currentReview) {
+        renderExportPanel(currentReview);
+      }
+      return preset;
+    }
+
+    function upsertExportPreset(name, prefs) {
+      const cleanedName = String(name || '').trim();
+      if (!cleanedName) {
+        throw new Error('Name the preset before saving it.');
+      }
+      const now = new Date().toLocaleString();
+      const existingIndex = getExportPresets().findIndex(item => item.name.toLowerCase() === cleanedName.toLowerCase());
+      let sanitizedWebhookHeadersText = prefs.webhookHeadersText || '{\n  "X-Change-System": "Config-Studio"\n}';
+      try {
+        const parsedHeaders = JSON.parse(sanitizedWebhookHeadersText);
+        if (parsedHeaders && !Array.isArray(parsedHeaders) && typeof parsedHeaders === 'object') {
+          const filteredEntries = Object.entries(parsedHeaders).filter(([key]) => !/(authorization|api[-_]?key|token|secret|cookie)/i.test(key));
+          sanitizedWebhookHeadersText = JSON.stringify(Object.fromEntries(filteredEntries), null, 2);
+        }
+      } catch {
+        // Leave raw header text alone here; export-time validation will still reject invalid JSON.
+      }
+      const nextPreset = {
+        ...prefs,
+        token: '',
+        webhookHeadersText: sanitizedWebhookHeadersText,
+        id: existingIndex >= 0 ? getExportPresets()[existingIndex].id : crypto.randomUUID(),
+        name: cleanedName,
+        createdAt: existingIndex >= 0 ? getExportPresets()[existingIndex].createdAt : now,
+        updatedAt: now,
+      };
+      if (existingIndex >= 0) {
+        exportPresets.splice(existingIndex, 1, nextPreset);
+      } else {
+        exportPresets = [nextPreset, ...getExportPresets()].slice(0, 12);
+      }
+      persistExportPresets();
+      return nextPreset;
+    }
+
+    function deleteExportPreset(presetId) {
+      exportPresets = getExportPresets().filter(item => item.id !== presetId);
+      persistExportPresets();
+    }
+
+    function saveExportPrefsFromPanel() {
+      const panel = document.getElementById('exportPanel');
+      if (!panel?.querySelector('#exportTarget')) return getExportPrefs();
+      const webhookHeadersField = panel.querySelector('#webhookHeadersText');
+      const serializedWebhookHeaders = document.activeElement === webhookHeadersField
+        ? (webhookHeadersField?.value || '{\n  "X-Change-System": "Config-Studio"\n}')
+        : panel.querySelector('[data-webhook-header-row]')
+          ? serializeWebhookHeaderRows(panel).jsonText
+          : (webhookHeadersField?.value || '{\n  "X-Change-System": "Config-Studio"\n}');
+      const nextPrefs = {
+        target: panel.querySelector('#exportTarget')?.value || 'jira',
+        authType: panel.querySelector('#exportAuthType')?.value || 'bearer',
+        jiraBaseUrl: panel.querySelector('#jiraBaseUrl')?.value.trim() || '',
+        jiraIssueKey: panel.querySelector('#jiraIssueKey')?.value.trim() || '',
+        jiraAddComment: Boolean(panel.querySelector('#jiraAddComment')?.checked),
+        serviceNowInstanceUrl: panel.querySelector('#serviceNowInstanceUrl')?.value.trim() || '',
+        serviceNowTableName: panel.querySelector('#serviceNowTableName')?.value.trim() || 'change_request',
+        serviceNowRecordSysId: panel.querySelector('#serviceNowRecordSysId')?.value.trim() || '',
+        serviceNowUpdateWorkNotes: Boolean(panel.querySelector('#serviceNowUpdateWorkNotes')?.checked),
+        serviceNowUpdateShortDescription: Boolean(panel.querySelector('#serviceNowUpdateShortDescription')?.checked),
+        webhookUrl: panel.querySelector('#webhookUrl')?.value.trim() || '',
+        webhookHeadersText: serializedWebhookHeaders,
+        webhookIncludeReviewPayload: Boolean(panel.querySelector('#webhookIncludeReviewPayload')?.checked),
+        webhookEmbedArtifacts: Boolean(panel.querySelector('#webhookEmbedArtifacts')?.checked),
+        username: panel.querySelector('#exportUsername')?.value.trim() || '',
+        token: panel.querySelector('#exportToken')?.value || '',
+        attachmentPrefix: panel.querySelector('#exportAttachmentPrefix')?.value.trim() || 'config-studio-review',
+        includePdf: Boolean(panel.querySelector('#exportIncludePdf')?.checked),
+        includeJson: Boolean(panel.querySelector('#exportIncludeJson')?.checked),
+        includeHtml: Boolean(panel.querySelector('#exportIncludeHtml')?.checked),
+        exportComment: panel.querySelector('#exportComment')?.value.trim() || '',
+      };
+      if (webhookHeadersField) webhookHeadersField.value = serializedWebhookHeaders;
+      saveSessionValue(SESSION_STORAGE_KEYS.exportPrefs, nextPrefs);
+      return nextPrefs;
+    }
+
+    function getFindingKey(finding, index) {
+      return `${finding.title}::${finding.line_start}::${finding.line_end}::${index}`;
+    }
+
+    function getStoredWorklistState(review = currentReview) {
+      const storageKey = getWorklistStorageKey(review);
+      return storageKey ? loadSessionValue(storageKey, {}) : {};
+    }
+
+    function getWorklistStorageKey(review = currentReview) {
+      if (!review?.config_hash) return null;
+      return `${SESSION_STORAGE_KEYS.findingSelections}:${review.config_hash}`;
+    }
+
+    function hydrateWorklistState(review) {
+      if (!review) {
+        currentWorklistState = {};
+        return;
+      }
+
+      const storageKey = getWorklistStorageKey(review);
+      const saved = storageKey ? loadSessionValue(storageKey, null) : null;
+      if (saved && typeof saved === 'object') {
+        currentWorklistState = saved;
+        return;
+      }
+
+      const seeded = {};
+      (review.findings || []).forEach((finding, index) => {
+        const key = getFindingKey(finding, index);
+        seeded[key] = { selected: finding.severity === 'critical', done: false };
+      });
+      currentWorklistState = seeded;
+      persistWorklistState();
+    }
+
+    function persistWorklistState() {
+      const storageKey = getWorklistStorageKey();
+      if (!storageKey) return;
+      saveSessionValue(storageKey, currentWorklistState);
+    }
+
+    function getBatchProgressState() {
+      return loadSessionValue(SESSION_STORAGE_KEYS.batchProgress, {});
+    }
+
+    function updateBatchProgress(reviewId, patch) {
+      if (!reviewId) return;
+      const progress = getBatchProgressState();
+      progress[reviewId] = {
+        ...(progress[reviewId] || {}),
+        ...patch,
+        updatedAt: new Date().toLocaleString(),
+      };
+      saveSessionValue(SESSION_STORAGE_KEYS.batchProgress, progress);
+    }
+
+    function getExportHistoryState() {
+      return loadSessionValue(SESSION_STORAGE_KEYS.exportHistory, {});
+    }
+
+    function getReviewExportHistory(reviewId) {
+      if (!reviewId) return [];
+      const history = getExportHistoryState();
+      return Array.isArray(history[reviewId]) ? history[reviewId] : [];
+    }
+
+    function getExportTargetLabelFromPrefs(prefs = getExportPrefs()) {
+      return prefs.target === 'servicenow'
+        ? 'ServiceNow'
+        : prefs.target === 'webhook'
+          ? 'Generic webhook'
+          : 'Jira Cloud';
+    }
+
+    function getExportDestinationLabelFromPrefs(prefs = getExportPrefs()) {
+      if (prefs.target === 'servicenow') {
+        return [prefs.serviceNowInstanceUrl || 'ServiceNow instance not set', prefs.serviceNowRecordSysId || 'record sys_id not set']
+          .filter(Boolean)
+          .join(' · ');
+      }
+      if (prefs.target === 'webhook') {
+        return prefs.webhookUrl || 'Webhook URL not set';
+      }
+      return [prefs.jiraBaseUrl || 'Jira site not set', prefs.jiraIssueKey || 'issue key not set']
+        .filter(Boolean)
+        .join(' · ');
+    }
+
+    function normalizeDestinationLabel(value) {
+      return String(value || '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
+    }
+
+    function getCurrentExportTargetSummary(prefs = getExportPrefs()) {
+      return {
+        target: getExportTargetLabelFromPrefs(prefs),
+        destination: getExportDestinationLabelFromPrefs(prefs),
+      };
+    }
+
+    function compareDestinationToCurrent(entryLike, prefs = getExportPrefs()) {
+      const current = getCurrentExportTargetSummary(prefs);
+      const candidate = {
+        target: entryLike?.target || 'Unknown target',
+        destination: entryLike?.destination || 'Unknown destination',
+      };
+      const sameTarget = normalizeDestinationLabel(candidate.target) === normalizeDestinationLabel(current.target);
+      const sameDestination = normalizeDestinationLabel(candidate.destination) === normalizeDestinationLabel(current.destination);
+      return {
+        current,
+        candidate,
+        sameTarget,
+        sameDestination,
+        isMatch: sameTarget && sameDestination,
+      };
+    }
+
+    function buildDestinationAlignmentBadge(entryLike, prefs = getExportPrefs(), { matchLabel = 'matches current target', staleLabel = 'stale vs current target' } = {}) {
+      if (!entryLike?.target || !entryLike?.destination) return '';
+      const comparison = compareDestinationToCurrent(entryLike, prefs);
+      if (comparison.isMatch) {
+        return `<span class="mini-pill">${escapeHtml(matchLabel)}</span>`;
+      }
+      return `<span class="mini-pill">${escapeHtml(staleLabel)}</span>`;
+    }
+
+    function buildDestinationAlignmentNote(entryLike, prefs = getExportPrefs(), { prefix = 'Compared with current export panel' } = {}) {
+      if (!entryLike?.target || !entryLike?.destination) return '';
+      const comparison = compareDestinationToCurrent(entryLike, prefs);
+      if (comparison.isMatch) {
+        return `${prefix}: matches current target.`;
+      }
+      return `${prefix}: stale relative to current target (${comparison.current.target} · ${comparison.current.destination}).`;
+    }
+
+    function buildExportRetryHints(entry) {
+      const hints = [];
+      if (!entry || ['success', 'unknown'].includes(entry.exportStatus)) {
+        return hints;
+      }
+      if (entry.attachmentsFailed > 0) {
+        hints.push('Retry after confirming the destination record still accepts attachments and the selected artifact formats are allowed.');
+      }
+      if (entry.commentAttempted && entry.commentDelivered === false) {
+        hints.push(entry.target === 'ServiceNow'
+          ? 'Retry after checking ServiceNow work-note/comment permissions for the API identity.'
+          : entry.target === 'Jira Cloud'
+            ? 'Retry after checking Jira comment permissions for the issue and API identity.'
+            : 'Retry after checking whether the destination accepts comment-style summary updates.');
+      }
+      if (entry.deliveryAttempted && entry.deliveryDelivered === false) {
+        hints.push('Retry after checking the webhook URL, TLS reachability, and any auth/header requirements.');
+      }
+      if ((entry.failedDetails || []).some(detail => String(detail.statusCode || '').startsWith('401') || String(detail.statusCode || '').startsWith('403'))) {
+        hints.push('Auth looks wrong or under-scoped — reload the destination credentials in this browser session before retrying.');
+      }
+      if ((entry.failedDetails || []).some(detail => String(detail.statusCode || '').startsWith('404'))) {
+        hints.push('The target ticket/record may be wrong or no longer accessible — confirm the issue key, sys_id, or webhook path.');
+      }
+      if ((entry.failedDetails || []).some(detail => String(detail.statusCode || '').startsWith('5'))) {
+        hints.push('The remote ITSM system returned a server-side failure — retry later or hand off the JSON/PDF manually if the change window is active.');
+      }
+      return [...new Set(hints)].slice(0, 4);
+    }
+
+    function buildExportFailureDetails(exportResult) {
+      const failedDetails = [];
+      (exportResult?.attachments || []).forEach(item => {
+        const statusCode = Number(item?.status_code || 0);
+        if (statusCode >= 400 || statusCode === 0) {
+          failedDetails.push({
+            component: 'artifact',
+            label: item?.filename || 'attachment',
+            statusCode: item?.status_code || 'n/a',
+            detail: item?.detail || `HTTP ${item?.status_code || 'n/a'}`,
+          });
+        }
+      });
+
+      const commentComponents = Array.isArray(exportResult?.comment_components) ? exportResult.comment_components : [];
+      const failedComponentNames = Array.isArray(exportResult?.failed_components) ? exportResult.failed_components : [];
+      const failedCommentComponents = commentComponents.filter(component => component?.attempted && component?.delivered === false);
+      if (failedCommentComponents.length) {
+        failedCommentComponents.forEach(component => {
+          failedDetails.push({
+            component: 'comment',
+            label: component?.component || 'comment/work note',
+            statusCode: component?.status_code || 'n/a',
+            detail: component?.detail || 'Component delivery failed',
+          });
+        });
+      } else if (exportResult?.comment?.attempted && !exportResult?.comment?.delivered) {
+        failedDetails.push({
+          component: 'comment',
+          label: failedComponentNames.find(name => String(name || '').includes(':')) || 'comment/work note',
+          statusCode: exportResult?.comment?.status_code || 'n/a',
+          detail: exportResult?.comment?.detail || 'Comment delivery failed',
+        });
+      }
+
+      if (exportResult?.delivery?.attempted && !exportResult?.delivery?.delivered) {
+        failedDetails.push({
+          component: 'webhook',
+          label: 'webhook delivery',
+          statusCode: exportResult?.delivery?.status_code || 'n/a',
+          detail: exportResult?.delivery?.detail || 'Webhook delivery failed',
+        });
+      }
+      return failedDetails;
+    }
+
+    function buildReusableExportPrefsSnapshot(prefs = getExportPrefs()) {
+      return {
+        target: prefs.target,
+        authType: prefs.authType,
+        jiraBaseUrl: prefs.jiraBaseUrl || '',
+        jiraIssueKey: prefs.jiraIssueKey || '',
+        jiraAddComment: Boolean(prefs.jiraAddComment),
+        serviceNowInstanceUrl: prefs.serviceNowInstanceUrl || '',
+        serviceNowTableName: prefs.serviceNowTableName || 'change_request',
+        serviceNowRecordSysId: prefs.serviceNowRecordSysId || '',
+        serviceNowUpdateWorkNotes: Boolean(prefs.serviceNowUpdateWorkNotes),
+        serviceNowUpdateShortDescription: Boolean(prefs.serviceNowUpdateShortDescription),
+        webhookUrl: prefs.webhookUrl || '',
+        webhookHeadersText: prefs.webhookHeadersText || '{\n  "X-Change-System": "Config-Studio"\n}',
+        webhookIncludeReviewPayload: Boolean(prefs.webhookIncludeReviewPayload),
+        webhookEmbedArtifacts: Boolean(prefs.webhookEmbedArtifacts),
+        username: prefs.username || '',
+        attachmentPrefix: prefs.attachmentPrefix || 'config-studio-review',
+        includePdf: Boolean(prefs.includePdf),
+        includeJson: Boolean(prefs.includeJson),
+        includeHtml: Boolean(prefs.includeHtml),
+        exportComment: prefs.exportComment || '',
+      };
+    }
+
+    function mergeReusableExportPrefs(reusablePrefs, basePrefs = getExportPrefs()) {
+      if (!reusablePrefs || typeof reusablePrefs !== 'object') {
+        return { ...getDefaultExportPrefs(), ...basePrefs };
+      }
+      const merged = { ...getDefaultExportPrefs(), ...basePrefs, ...reusablePrefs };
+      merged.token = basePrefs.token || '';
+      if (merged.authType === 'basic' && !merged.username) {
+        merged.username = basePrefs.username || '';
+      }
+      return merged;
+    }
+
+    function findLatestSuccessfulExportEntry(reviewIds = []) {
+      const history = getExportHistoryState();
+      const candidateReviewIds = reviewIds.length ? reviewIds : Object.keys(history);
+      const successes = candidateReviewIds.flatMap(reviewId => {
+        const entries = Array.isArray(history[reviewId]) ? history[reviewId] : [];
+        return entries
+          .filter(entry => entry.exportStatus === 'success' && entry.reusablePrefs)
+          .map(entry => ({ ...entry, reviewId }));
+      });
+      successes.sort((a, b) => Number(b.createdAtMs || 0) - Number(a.createdAtMs || 0));
+      return successes[0] || null;
+    }
+
+    function applyReusableExportPrefs(reusablePrefs, { rerender = true } = {}) {
+      const mergedPrefs = mergeReusableExportPrefs(reusablePrefs, getExportPrefs());
+      saveSessionValue(SESSION_STORAGE_KEYS.exportPrefs, mergedPrefs);
+      if (rerender && currentReview) {
+        renderExportPanel(currentReview);
+      }
+      if (currentBatchReview?.reviews?.length) {
+        renderBatchReviewResults(currentBatchReview);
+      }
+      return mergedPrefs;
+    }
+
+    function recordExportHistory(review, exportResult, exportPrefs = getExportPrefs()) {
+      const reviewId = review?.review_id;
+      if (!reviewId || !exportResult) return [];
+      const history = getExportHistoryState();
+      const entries = Array.isArray(history[reviewId]) ? [...history[reviewId]] : [];
+      const failedDetails = buildExportFailureDetails(exportResult);
+      const now = Date.now();
+      const commentComponents = Array.isArray(exportResult?.comment_components) ? exportResult.comment_components : [];
+      const entry = {
+        timestamp: new Date(now).toLocaleString(),
+        createdAtMs: now,
+        target: exportPrefs.target === 'servicenow'
+          ? 'ServiceNow'
+          : exportPrefs.target === 'webhook'
+            ? 'Webhook'
+            : 'Jira Cloud',
+        destination: exportResult?.destination?.label
+          || exportResult?.destination?.record
+          || exportResult?.destination?.url
+          || exportResult?.destination?.issue_key
+          || exportResult?.destination?.record_sys_id
+          || 'not set',
+        exportStatus: exportResult?.summary?.export_status || 'unknown',
+        attachmentsAttempted: (exportResult?.attachments || []).length,
+        attachmentsFailed: Number(exportResult?.summary?.attachments_failed || 0),
+        commentAttempted: Boolean(exportResult?.comment?.attempted),
+        commentDelivered: exportResult?.comment?.attempted ? Boolean(exportResult?.comment?.delivered) : null,
+        commentComponentsAttempted: Number(exportResult?.summary?.comment_components_attempted || commentComponents.filter(component => component?.attempted).length || 0),
+        commentComponentsDelivered: Number(exportResult?.summary?.comment_components_delivered || commentComponents.filter(component => component?.attempted && component?.delivered).length || 0),
+        commentComponentsFailed: Number(exportResult?.summary?.comment_components_failed || commentComponents.filter(component => component?.attempted && component?.delivered === false).length || 0),
+        commentComponents,
+        failedComponents: Array.isArray(exportResult?.failed_components) ? exportResult.failed_components : [],
+        deliveryAttempted: Boolean(exportResult?.delivery?.attempted),
+        deliveryDelivered: exportResult?.delivery?.attempted ? Boolean(exportResult?.delivery?.delivered) : null,
+        failedDetails,
+        reusablePrefs: buildReusableExportPrefsSnapshot(exportPrefs),
+      };
+      entry.retryHints = buildExportRetryHints(entry);
+      history[reviewId] = [entry, ...entries].slice(0, 6);
+      saveSessionValue(SESSION_STORAGE_KEYS.exportHistory, history);
+      return history[reviewId];
+    }
+
+    function renderExportHistoryList(reviewId) {
+      const history = getReviewExportHistory(reviewId);
+      if (!history.length) {
+        return '<p class="muted">No export attempts recorded yet for this review in this browser session.</p>';
+      }
+      return `
+        <div class="history-list">
+          ${history.map(item => {
+            const deliveryBits = [
+              `${item.attachmentsAttempted} artifact${item.attachmentsAttempted === 1 ? '' : 's'}`,
+              item.attachmentsFailed ? `${item.attachmentsFailed} failed` : 'artifacts ok',
+              item.commentAttempted
+                ? `comment ${item.commentDelivered ? 'delivered' : 'failed'}${item.commentComponentsAttempted ? ` (${item.commentComponentsDelivered}/${item.commentComponentsAttempted} components ok)` : ''}`
+                : 'no comment',
+              item.deliveryAttempted ? `delivery ${item.deliveryDelivered ? 'delivered' : 'failed'}` : 'no webhook',
+            ].join(' · ');
+            const failureDetails = (item.failedDetails || []).length
+              ? `<ul>${item.failedDetails.map(detail => `<li>${escapeHtml(detail.label)} — HTTP ${escapeHtml(detail.statusCode)} · ${escapeHtml(detail.detail)}</li>`).join('')}</ul>`
+              : '';
+            const componentSummary = item.commentComponentsAttempted
+              ? `<div class="history-meta">Comment components: ${escapeHtml(item.commentComponentsDelivered)} delivered · ${escapeHtml(item.commentComponentsFailed)} failed</div>`
+              : '';
+            const failedComponents = (item.failedComponents || []).length
+              ? `<div class="history-meta">Failed components: ${escapeHtml(item.failedComponents.join(', '))}</div>`
+              : '';
+            const retryHints = (item.retryHints || []).length
+              ? `<div class="history-meta"><strong>Retry hints:</strong></div><ul>${item.retryHints.map(hint => `<li>${escapeHtml(hint)}</li>`).join('')}</ul>`
+              : '';
+            return `
+              <div class="history-item">
+                <div><strong>${escapeHtml(item.target)}</strong> · ${escapeHtml(item.destination)}</div>
+                <div class="history-meta">${escapeHtml(item.timestamp)} · export status: ${escapeHtml(item.exportStatus)}</div>
+                <div class="history-meta">${escapeHtml(deliveryBits)}</div>
+                ${componentSummary}
+                ${failedComponents}
+                ${failureDetails}
+                ${retryHints}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function updateWorklistItem(finding, index, patch) {
+      const key = getFindingKey(finding, index);
+      currentWorklistState[key] = { selected: false, done: false, ...(currentWorklistState[key] || {}), ...patch };
+      persistWorklistState();
+      renderFindings(currentReview.findings);
+      renderWorklist(currentReview);
+    }
+
+    function getSelectedWorklistItems(review = currentReview, worklistState = null) {
+      if (!review) return [];
+      const effectiveState = worklistState || (review === currentReview ? currentWorklistState : getStoredWorklistState(review));
+      return (review.findings || []).map((finding, index) => {
+        const key = getFindingKey(finding, index);
+        return { key, index, finding, state: effectiveState[key] || { selected: false, done: false } };
+      }).filter(item => item.state.selected);
+    }
+
+    function getFindingChangePriority(finding) {
+      const text = `${finding.title || ''} ${finding.description || ''} ${finding.remediation || ''}`.toLowerCase();
+      if (['route-map', 'prefix-list', 'community-list', 'policy-map', 'class-map'].some(token => text.includes(token))) return 10;
+      if (text.includes('vlan') && ['create', 'define', 'database'].some(token => text.includes(token))) return 20;
+      if (['aaa', 'tacacs', 'radius', 'snmp-server', 'http', 'https', 'control-plane', 'copp'].some(token => text.includes(token))) return 30;
+      if (['interface', 'router bgp', 'router ospf', 'line vty', 'line con', 'line aux'].some(token => text.includes(token))) return 40;
+      return 50;
+    }
+
+    function dedupeChangeBlocks(blocks) {
+      const seen = new Set();
+      const ordered = [];
+      blocks.forEach(block => {
+        const normalized = String(block || '')
+          .split('\n')
+          .map(line => line.replace(/\s+$/g, ''))
+          .join('\n')
+          .trim();
+        if (!normalized || seen.has(normalized)) return;
+        seen.add(normalized);
+        ordered.push(normalized);
+      });
+      return ordered;
+    }
+
+    function buildSelectedChangePlan(review = currentReview) {
+      const selected = getSelectedWorklistItems(review);
+      if (!selected.length) {
+        return {
+          selected,
+          ordered: [],
+          remediationBlocks: [],
+          rollbackBlocks: [],
+          applyScript: '',
+          rollbackScript: '',
+        };
+      }
+
+      const ordered = [...selected].sort((a, b) => {
+        const priorityDelta = getFindingChangePriority(a.finding) - getFindingChangePriority(b.finding);
+        if (priorityDelta !== 0) return priorityDelta;
+        if (a.finding.line_start !== b.finding.line_start) return a.finding.line_start - b.finding.line_start;
+        return String(a.finding.title || '').localeCompare(String(b.finding.title || ''));
+      });
+
+      const remediationBlocks = dedupeChangeBlocks(
+        ordered
+          .filter(item => item.finding.remediation)
+          .map(item => `# ${item.finding.title} (lines ${item.finding.line_start}-${item.finding.line_end})\n${item.finding.remediation}`)
+      );
+      const rollbackBlocks = dedupeChangeBlocks(
+        [...ordered].reverse()
+          .filter(item => item.finding.rollback)
+          .map(item => `# ${item.finding.title} (lines ${item.finding.line_start}-${item.finding.line_end})\n${item.finding.rollback}`)
+      );
+
+      return {
+        selected,
+        ordered,
+        remediationBlocks,
+        rollbackBlocks,
+        applyScript: remediationBlocks.join('\n\n'),
+        rollbackScript: rollbackBlocks.join('\n\n'),
+      };
+    }
+
+    async function copyWorklistScript(type) {
+      const plan = buildSelectedChangePlan();
+      const script = type === 'remediation' ? plan.applyScript : plan.rollbackScript;
+
+      if (!script) {
+        alert(`No selected findings have ${type} text yet.`);
+        return;
+      }
+
+      await copyTextToClipboard(script, `Selected ${type} steps copied.`);
+    }
+
+    function focusNextWorklistItem() {
+      const selected = getSelectedWorklistItems();
+      const nextItem = selected.find(item => !item.state.done) || selected[0];
+      if (!nextItem) {
+        alert('Select at least one finding for the worklist first.');
+        return;
+      }
+      setNavigatorFocus(nextItem.finding.line_start, nextItem.finding.line_end);
+    }
+
+    function renderStats(summary, risk, passFail) {
+      const stats = document.getElementById('stats');
+      stats.style.display = 'grid';
+      stats.innerHTML = `
+        <div class="stat"><div class="label">Status</div><div class="value status ${passFail ? 'pass' : 'fail'}">${passFail ? 'PASS' : 'FAIL'}</div></div>
+        <div class="stat"><div class="label">Risk score</div><div class="value">${risk.score}</div></div>
+        <div class="stat"><div class="label">Grade</div><div class="value">${risk.grade}</div></div>
+        <div class="stat"><div class="label">Findings</div><div class="value">${summary.total_findings}</div></div>
+      `;
+    }
+
+    function renderReportHeader(report) {
+      const panel = document.getElementById('reportHeaderPanel');
+      panel.innerHTML = `
+        <div class="finding info">
+          <h4>Report header</h4>
+          <p><strong>Generated (UTC):</strong> ${escapeHtml(report.header.generated_at_utc)}</p>
+          <p><strong>Engineer:</strong> ${escapeHtml(report.header.engineer_identity)}</p>
+          <p><strong>Hostname:</strong> ${escapeHtml(report.header.hostname || 'Unknown')}</p>
+          <p><strong>Platform detected:</strong> ${escapeHtml(report.header.platform_detected)}</p>
+          <p><strong>Template version used:</strong> ${escapeHtml(report.header.template_version_used)}</p>
+        </div>
+      `;
+    }
+
+    function renderTemplateCompliance(report) {
+      const panel = document.getElementById('templateCompliancePanel');
+      const compliance = report.body.template_compliance;
+      const deviations = (compliance.deviations || []).map(item => `
+        <li>${escapeHtml(item.rule_name)} — ${escapeHtml(item.description)}</li>
+      `).join('');
+      panel.innerHTML = `
+        <div class="finding info">
+          <h4>Golden template compliance</h4>
+          <p><strong>Template:</strong> ${escapeHtml(compliance.template_name)} (${escapeHtml(compliance.template_version)})</p>
+          <p><strong>Passed rules:</strong> ${compliance.passed_rules} · <strong>Failed rules:</strong> ${compliance.failed_rules}</p>
+          ${deviations ? `<p><strong>Deviations</strong></p><ul>${deviations}</ul>` : '<p>No template deviations captured in this review.</p>'}
+        </div>
+      `;
+    }
+
+    function renderQuickPassPanel(review) {
+      const panel = document.getElementById('quickPassPanel');
+      const criticals = (review.findings || []).filter(f => f.severity === 'critical');
+      if (!document.getElementById('quickPass').checked) {
+        panel.innerHTML = '';
+        return;
+      }
+      panel.innerHTML = `
+        <div class="finding ${review.pass_fail ? 'info' : 'critical'}">
+          <h4>Quick-pass result</h4>
+          <p><strong>${review.pass_fail ? 'Safe to push, based on criticals only.' : 'Not safe to push — critical findings detected.'}</strong></p>
+          <ol class="list">
+            ${criticals.slice(0, 5).map(f => `<li>${escapeHtml(f.title)} (lines ${f.line_start}-${f.line_end})</li>`).join('') || '<li>No critical findings.</li>'}
+          </ol>
+        </div>
+      `;
+    }
+
+    function renderChangeScript(report) {
+      const panel = document.getElementById('changeScriptPanel');
+      const script = report.body.ordered_change_script;
+      if (!script?.generated) {
+        panel.innerHTML = '';
+        return;
+      }
+      panel.innerHTML = `
+        <div class="finding info">
+          <h4>Ordered change script</h4>
+          <p>${escapeHtml(script.rationale || 'Consolidated apply/rollback script generated from current findings.')}</p>
+          <p><strong>Finding order:</strong> ${escapeHtml((script.finding_order || []).join(' → '))}</p>
+          <p><strong>Apply script</strong></p>
+          <pre>${escapeHtml(script.apply_script || '')}</pre>
+          <p><strong>Rollback script</strong></p>
+          <pre>${escapeHtml(script.rollback_script || '')}</pre>
+        </div>
+      `;
+    }
+
+    function renderWorklist(review) {
+      const panel = document.getElementById('worklistPanel');
+      if (!review?.findings?.length) {
+        panel.innerHTML = '';
+        return;
+      }
+
+      const selected = getSelectedWorklistItems(review);
+      const openCount = selected.filter(item => !item.state.done).length;
+      const doneCount = selected.filter(item => item.state.done).length;
+
+      if (!selected.length) {
+        panel.innerHTML = `
+          <div class="finding info worklist-summary">
+            <h4>Operator worklist</h4>
+            <p>Pick the findings you actually plan to touch in this window. The app will keep a session-scoped fix queue, let you jump to the next open item, and copy only the selected remediation or rollback blocks.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const changePlan = buildSelectedChangePlan(review);
+      panel.innerHTML = `
+        <div class="finding info worklist-summary">
+          <div class="worklist-item-header">
+            <div>
+              <h4>Operator worklist</h4>
+              <p><strong>${selected.length}</strong> selected · <strong>${openCount}</strong> open · <strong>${doneCount}</strong> done</p>
+            </div>
+            <div class="mini-pill">Session-scoped change-window queue</div>
+          </div>
+          <div class="worklist-actions">
+            <button id="worklistNextBtn" class="secondary-action">Jump to next open item</button>
+            <button id="worklistCopyRemediationBtn" class="secondary-action">Copy selected remediation</button>
+            <button id="worklistCopyRollbackBtn" class="secondary-action">Copy selected rollback</button>
+          </div>
+          <div class="change-plan-card">
+            <div class="worklist-item-header">
+              <div>
+                <strong>Selected change plan</strong>
+                <div class="worklist-meta">Ordered so reusable objects and global policy land before interface/protocol references; rollback is reversed for safer undo.</div>
+              </div>
+              <span class="mini-pill">maintenance-window ready</span>
+            </div>
+            <p><strong>Apply order:</strong> ${changePlan.ordered.map(item => escapeHtml(item.finding.title)).join(' → ') || 'No actionable remediation blocks yet.'}</p>
+            <div class="worklist-actions">
+              <button id="worklistCopyOrderedApplyBtn" class="secondary-action">Copy ordered apply script</button>
+              <button id="worklistCopyOrderedRollbackBtn" class="secondary-action">Copy ordered rollback script</button>
+            </div>
+            <p><strong>Apply</strong></p>
+            <pre>${escapeHtml(changePlan.applyScript || '! No remediation generated for the current selection.')}</pre>
+            <p><strong>Rollback</strong></p>
+            <pre>${escapeHtml(changePlan.rollbackScript || '! No rollback generated for the current selection.')}</pre>
+          </div>
+          <div class="history-list">
+            ${selected.map(item => `
+              <div class="worklist-item ${item.state.done ? 'done' : ''}">
+                <div class="worklist-item-header">
+                  <div>
+                    <strong>${escapeHtml(item.finding.title)}</strong>
+                    <div class="worklist-meta">${escapeHtml(item.finding.category)} · lines ${item.finding.line_start}-${item.finding.line_end}</div>
+                  </div>
+                  <span class="badge ${item.finding.severity}">${escapeHtml(item.finding.severity)}</span>
+                </div>
+                <div class="worklist-actions">
+                  <button class="secondary-action" data-worklist-focus-index="${item.index}">Focus</button>
+                  <button class="secondary-action" data-worklist-done-index="${item.index}">${item.state.done ? 'Mark not done' : 'Mark done'}</button>
+                  <button class="secondary-action" data-worklist-remove-index="${item.index}">Remove from worklist</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('worklistNextBtn')?.addEventListener('click', focusNextWorklistItem);
+      document.getElementById('worklistCopyRemediationBtn')?.addEventListener('click', () => copyWorklistScript('remediation'));
+      document.getElementById('worklistCopyRollbackBtn')?.addEventListener('click', () => copyWorklistScript('rollback'));
+      document.getElementById('worklistCopyOrderedApplyBtn')?.addEventListener('click', () => copyWorklistScript('remediation'));
+      document.getElementById('worklistCopyOrderedRollbackBtn')?.addEventListener('click', () => copyWorklistScript('rollback'));
+
+      panel.querySelectorAll('[data-worklist-focus-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const index = Number(button.dataset.worklistFocusIndex);
+          const finding = currentReview?.findings?.[index];
+          if (!finding) return;
+          setNavigatorFocus(finding.line_start, finding.line_end);
+        });
+      });
+
+      panel.querySelectorAll('[data-worklist-done-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const index = Number(button.dataset.worklistDoneIndex);
+          const finding = currentReview?.findings?.[index];
+          if (!finding) return;
+          const key = getFindingKey(finding, index);
+          updateWorklistItem(finding, index, { done: !currentWorklistState[key]?.done, selected: true });
+        });
+      });
+
+      panel.querySelectorAll('[data-worklist-remove-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const index = Number(button.dataset.worklistRemoveIndex);
+          const finding = currentReview?.findings?.[index];
+          if (!finding) return;
+          updateWorklistItem(finding, index, { selected: false, done: false });
+        });
+      });
+    }
+
+    function renderExportPanel(review, exportResult = null) {
+      const panel = document.getElementById('exportPanel');
+      if (!review) {
+        panel.innerHTML = '';
+        return;
+      }
+
+      const prefs = getExportPrefs();
+      const readiness = getExportReadiness(prefs);
+      const targetLabel = readiness.targetLabel;
+      const destinationLabel = readiness.destinationLabel;
+      const webhookHeaderRows = getWebhookHeaderRowsFromPrefs(prefs);
+      const attachmentWarnings = (exportResult?.attachments || []).some(item => Number(item.status_code) >= 400 || item.status_code === 0);
+      const commentWarning = Boolean(exportResult?.comment?.attempted && exportResult?.comment?.delivered === false);
+      const exportHistoryHtml = renderExportHistoryList(review.review_id);
+      const presetOptions = getExportPresets().map(preset => `
+        <option value="${escapeHtml(preset.id)}">${escapeHtml(preset.name)} — ${escapeHtml(getExportPresetSummary(preset))}</option>
+      `).join('');
+
+      panel.innerHTML = `
+        <div class="finding info worklist-summary">
+          <div class="worklist-item-header">
+            <div>
+              <h4>ITSM export</h4>
+              <p>Attach this review straight to a live change record from the UI instead of rebuilding the handoff manually.</p>
+            </div>
+            <div class="mini-pill">Operator handoff</div>
+          </div>
+          <div class="row-3">
+            <label>
+              <span class="muted">Target</span>
+              <select id="exportTarget">
+                <option value="jira" ${prefs.target === 'jira' ? 'selected' : ''}>Jira Cloud</option>
+                <option value="servicenow" ${prefs.target === 'servicenow' ? 'selected' : ''}>ServiceNow</option>
+                <option value="webhook" ${prefs.target === 'webhook' ? 'selected' : ''}>Generic webhook</option>
+              </select>
+            </label>
+            <label>
+              <span class="muted">Auth type</span>
+              <select id="exportAuthType">
+                <option value="bearer" ${prefs.authType === 'bearer' ? 'selected' : ''}>Bearer token</option>
+                <option value="basic" ${prefs.authType === 'basic' ? 'selected' : ''}>Basic auth</option>
+              </select>
+            </label>
+            <label>
+              <span class="muted">Attachment prefix</span>
+              <input id="exportAttachmentPrefix" value="${escapeHtml(prefs.attachmentPrefix)}" placeholder="config-studio-review" />
+            </label>
+          </div>
+
+          <div class="finding ${readiness.ready ? 'info' : 'warning'}" style="margin-top:12px;">
+            <div class="worklist-item-header">
+              <div>
+                <h4>Export readiness</h4>
+                <p><strong>${escapeHtml(targetLabel)}</strong> · ${escapeHtml(destinationLabel)}</p>
+              </div>
+              <div class="mini-pill">${readiness.ready ? 'ready to export' : 'needs input before export'}</div>
+            </div>
+            <p>${readiness.ready
+              ? 'This target has the required destination/auth/artifact fields for a one-click handoff right now.'
+              : 'Before the maintenance window gets noisy, finish the missing fields below so export does not fail on basic setup.'}</p>
+            ${readiness.missing.length
+              ? `<p><strong>Missing / invalid</strong></p><ul>${readiness.missing.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+              : '<p><strong>Checks passed:</strong> destination, auth expectations, and artifact selection all look set.</p>'}
+            ${readiness.notes.length ? `<p><strong>What this export will do</strong></p><ul>${readiness.notes.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+            <div class="history-meta">Tip: use presets for recurring destinations, then reload only the secret for tonight’s change window.</div>
+          </div>
+
+          <div class="finding info" style="margin-top:12px;">
+            <h4>Target quick select</h4>
+            <p>Pick the handoff path that matches tonight’s destination. The panel below only shows the fields that matter for that target.</p>
+            <div class="finding-toolbar">
+              <button type="button" class="secondary-action" data-export-target-card="jira">Jira Cloud — issue + attachments</button>
+              <button type="button" class="secondary-action" data-export-target-card="servicenow">ServiceNow — record + work notes</button>
+              <button type="button" class="secondary-action" data-export-target-card="webhook">Generic webhook — payload delivery</button>
+            </div>
+          </div>
+
+          <div class="finding info" style="margin-top:12px;">
+            <h4>Saved destination presets</h4>
+            <p>Store recurring Jira, ServiceNow, or webhook handoff targets so the next change window starts with one click instead of retyping URLs, issue keys, and record IDs. Presets keep destination details, not secrets — re-enter tokens/passwords when needed.</p>
+            <div class="row-3">
+              <label>
+                <span class="muted">Preset name</span>
+                <input id="exportPresetName" placeholder="e.g. CAB Jira change ticket" />
+              </label>
+              <label>
+                <span class="muted">Load preset</span>
+                <select id="exportPresetSelect">
+                  <option value="">Select a saved destination</option>
+                  ${presetOptions}
+                </select>
+              </label>
+              <div style="display:flex; align-items:end; gap:8px; flex-wrap:wrap;">
+                <button id="loadExportPresetBtn" class="secondary-action">Load preset</button>
+                <button id="saveExportPresetBtn" class="secondary-action">Save current as preset</button>
+                <button id="deleteExportPresetBtn" class="secondary-action">Delete preset</button>
+              </div>
+            </div>
+            ${getExportPresets().length ? `
+              <div class="history-list" style="margin-top:12px;">
+                ${getExportPresets().map(preset => `
+                  <div class="history-item">
+                    <div><strong>${escapeHtml(preset.name)}</strong></div>
+                    <div class="history-meta">${escapeHtml(getExportPresetSummary(preset))}</div>
+                    <div class="history-meta">Updated ${escapeHtml(preset.updatedAt || preset.createdAt || 'unknown')}</div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : '<p class="muted">No saved destinations yet.</p>'}
+          </div>
+
+          <div id="jiraExportFields" style="display:${prefs.target === 'jira' ? 'grid' : 'none'}; gap:12px; margin-top:12px;">
+            <div class="row">
+              <label>
+                <span class="muted">Jira base URL</span>
+                <input id="jiraBaseUrl" value="${escapeHtml(prefs.jiraBaseUrl)}" placeholder="https://your-org.atlassian.net" />
+              </label>
+              <label>
+                <span class="muted">Issue key</span>
+                <input id="jiraIssueKey" value="${escapeHtml(prefs.jiraIssueKey)}" placeholder="NET-123" />
+              </label>
+            </div>
+            <label><input id="jiraAddComment" type="checkbox" ${prefs.jiraAddComment ? 'checked' : ''} /> Add summary comment to the issue</label>
+          </div>
+
+          <div id="serviceNowExportFields" style="display:${prefs.target === 'servicenow' ? 'grid' : 'none'}; gap:12px; margin-top:12px;">
+            <div class="row-3">
+              <label>
+                <span class="muted">Instance URL</span>
+                <input id="serviceNowInstanceUrl" value="${escapeHtml(prefs.serviceNowInstanceUrl)}" placeholder="https://example.service-now.com" />
+              </label>
+              <label>
+                <span class="muted">Table</span>
+                <input id="serviceNowTableName" value="${escapeHtml(prefs.serviceNowTableName)}" placeholder="change_request" />
+              </label>
+              <label>
+                <span class="muted">Record sys_id</span>
+                <input id="serviceNowRecordSysId" value="${escapeHtml(prefs.serviceNowRecordSysId)}" placeholder="0123456789abcdef..." />
+              </label>
+            </div>
+            <div class="row">
+              <label><input id="serviceNowUpdateWorkNotes" type="checkbox" ${prefs.serviceNowUpdateWorkNotes ? 'checked' : ''} /> Update work notes with review summary</label>
+              <label><input id="serviceNowUpdateShortDescription" type="checkbox" ${prefs.serviceNowUpdateShortDescription ? 'checked' : ''} /> Update short description with pass/fail</label>
+            </div>
+          </div>
+
+          <div id="webhookExportFields" style="display:${prefs.target === 'webhook' ? 'grid' : 'none'}; gap:12px; margin-top:12px;">
+            <label>
+              <span class="muted">Webhook URL</span>
+              <input id="webhookUrl" value="${escapeHtml(prefs.webhookUrl)}" placeholder="https://change.example.com/hooks/config-review" />
+            </label>
+            <div class="finding info">
+              <h4>Webhook headers</h4>
+              <p>Use the guided rows for normal header entry instead of hand-editing JSON. The raw JSON view stays below for copy/paste and advanced cases.</p>
+              <div id="webhookHeaderEditor">
+                ${webhookHeaderRows.map((row, index) => `
+                  <div class="row" data-webhook-header-row>
+                    <label>
+                      <span class="muted">Header name</span>
+                      <input data-webhook-header-key value="${escapeHtml(row.key)}" placeholder="X-Change-System" />
+                    </label>
+                    <label>
+                      <span class="muted">Header value</span>
+                      <input data-webhook-header-value value="${escapeHtml(row.value)}" placeholder="Config-Studio" />
+                    </label>
+                    <div style="display:flex; align-items:end; gap:8px; flex-wrap:wrap;">
+                      <button type="button" class="secondary-action" data-webhook-header-add="${index}">Add header</button>
+                      <button type="button" class="secondary-action" data-webhook-header-remove="${index}" ${webhookHeaderRows.length === 1 ? 'disabled' : ''}>Remove</button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+              <label style="margin-top:12px; display:block;">
+                <span class="muted">Advanced raw JSON view</span>
+                <textarea id="webhookHeadersText" rows="6" placeholder='{"Authorization":"Bearer ..."}'>${escapeHtml(prefs.webhookHeadersText)}</textarea>
+              </label>
+            </div>
+            <div class="row">
+              <label><input id="webhookIncludeReviewPayload" type="checkbox" ${prefs.webhookIncludeReviewPayload ? 'checked' : ''} /> Include full review payload in webhook body</label>
+              <label><input id="webhookEmbedArtifacts" type="checkbox" ${prefs.webhookEmbedArtifacts ? 'checked' : ''} /> Embed artifacts inline as base64</label>
+            </div>
+          </div>
+
+          <div class="row-3" style="margin-top:12px;">
+            <label>
+              <span class="muted">Username (basic auth only)</span>
+              <input id="exportUsername" value="${escapeHtml(prefs.username)}" placeholder="api-user or email" />
+            </label>
+            <label>
+              <span class="muted">Token / password</span>
+              <input id="exportToken" type="password" value="${escapeHtml(prefs.token)}" placeholder="Bearer token or password" />
+            </label>
+            <label>
+              <span class="muted">Comment / work-note text</span>
+              <input id="exportComment" value="${escapeHtml(prefs.exportComment)}" placeholder="Optional change-window note" />
+            </label>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <label><input id="exportIncludePdf" type="checkbox" ${prefs.includePdf ? 'checked' : ''} /> PDF</label>
+            <label><input id="exportIncludeJson" type="checkbox" ${prefs.includeJson ? 'checked' : ''} /> JSON</label>
+            <label><input id="exportIncludeHtml" type="checkbox" ${prefs.includeHtml ? 'checked' : ''} /> HTML</label>
+          </div>
+
+          <div class="finding-toolbar" style="margin-top:12px;">
+            <button id="exportReviewBtn" class="primary" ${readiness.ready ? '' : 'disabled'}>${readiness.ready ? `Export current review to ${escapeHtml(targetLabel)}` : 'Finish required fields to export'}</button>
+            <button id="exportReviewCopySummaryBtn" class="secondary-action">Copy handoff summary</button>
+            <button id="exportReviewDownloadFallbackBtn" class="secondary-action">Download fallback bundle</button>
+          </div>
+
+          <div id="exportStatusPanel" style="margin-top:12px;">
+            ${exportResult ? `
+              <div class="finding ${attachmentWarnings || commentWarning ? 'warning' : 'info'}">
+                <h4>Last export result</h4>
+                <p><strong>Destination:</strong> ${escapeHtml(targetLabel)} · ${escapeHtml(destinationLabel)}</p>
+                <p><strong>Overall export status:</strong> ${escapeHtml(exportResult.summary?.export_status || 'unknown')}</p>
+                <p><strong>Attachments attempted:</strong> ${(exportResult.attachments || []).length} · <strong>Comment attempted:</strong> ${exportResult.comment?.attempted ? 'yes' : 'no'}</p>
+                ${(exportResult.attachments || []).length ? `<ul>${(exportResult.attachments || []).map(item => `<li>${escapeHtml(item.filename)} — HTTP ${escapeHtml(item.status_code || 'n/a')} · ${escapeHtml(item.bytes)} bytes</li>`).join('')}</ul>` : '<p>No artifacts were attached.</p>'}
+                ${exportResult.comment?.attempted ? `<p><strong>Comment/work note:</strong> HTTP ${escapeHtml(exportResult.comment.status_code || 'n/a')} · ${escapeHtml(exportResult.comment.detail || 'No response detail')}</p>` : ''}
+                ${(exportResult.comment_components || []).length ? `<p><strong>Comment components:</strong> ${(exportResult.comment_components || []).filter(item => item.attempted).length} attempted · ${(exportResult.comment_components || []).filter(item => item.attempted && item.delivered).length} delivered</p><ul>${(exportResult.comment_components || []).map(item => `<li>${escapeHtml(item.component || 'comment')} — ${item.attempted ? `HTTP ${escapeHtml(item.status_code || 'n/a')} · ${escapeHtml(item.delivered ? 'delivered' : 'failed')}` : 'not attempted'}${item.detail ? ` · ${escapeHtml(item.detail)}` : ''}</li>`).join('')}</ul>` : ''}
+                ${(exportResult.failed_components || []).length ? `<p><strong>Failed components:</strong> ${escapeHtml((exportResult.failed_components || []).join(', '))}</p>` : ''}
+                ${exportResult.delivery?.attempted ? `<p><strong>Webhook delivery:</strong> HTTP ${escapeHtml(exportResult.delivery.status_code || 'n/a')} · ${escapeHtml(exportResult.delivery.detail || 'No response detail')}</p>` : ''}
+              </div>
+            ` : `
+              <div class="finding info">
+                <h4>Ready for handoff</h4>
+                <p><strong>Current target:</strong> ${escapeHtml(targetLabel)} · ${escapeHtml(destinationLabel)}</p>
+                <p>This panel keeps destination/auth details for the current browser session so you can work through multiple devices in one change window without retyping the ticket info every time.</p>
+              </div>
+            `}
+            <div class="finding info">
+              <h4>Export history</h4>
+              <p>Session-scoped audit trail for this review so an operator can see what already got handed off during the current change window.</p>
+              ${exportHistoryHtml}
+            </div>
+          </div>
+        </div>
+      `;
+
+      renderWebhookHeaderEditor(panel, prefs);
+
+      const syncPrefs = () => {
+        const nextPrefs = saveExportPrefsFromPanel();
+        document.getElementById('jiraExportFields').style.display = nextPrefs.target === 'jira' ? 'grid' : 'none';
+        document.getElementById('serviceNowExportFields').style.display = nextPrefs.target === 'servicenow' ? 'grid' : 'none';
+        document.getElementById('webhookExportFields').style.display = nextPrefs.target === 'webhook' ? 'grid' : 'none';
+      };
+
+      panel.querySelectorAll('input, select, textarea').forEach(input => {
+        input.addEventListener('change', syncPrefs);
+        input.addEventListener('input', syncPrefs);
+      });
+
+      panel.querySelector('#webhookHeadersText')?.addEventListener('change', () => {
+        saveExportPrefsFromPanel();
+        renderWebhookHeaderEditor(panel, getExportPrefs());
+      });
+
+      panel.querySelectorAll('[data-export-target-card]').forEach(button => {
+        button.addEventListener('click', () => {
+          const nextPrefs = { ...getExportPrefs(), target: button.dataset.exportTargetCard };
+          saveSessionValue(SESSION_STORAGE_KEYS.exportPrefs, nextPrefs);
+          renderExportPanel(review, exportResult);
+        });
+      });
+
+      document.getElementById('loadExportPresetBtn')?.addEventListener('click', () => {
+        try {
+          const presetId = panel.querySelector('#exportPresetSelect')?.value;
+          if (!presetId) {
+            alert('Choose a preset first.');
+            return;
+          }
+          const preset = loadExportPresetById(presetId, { rerender: true });
+          alert(`Loaded preset: ${preset.name}`);
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+
+      document.getElementById('saveExportPresetBtn')?.addEventListener('click', () => {
+        try {
+          const presetName = panel.querySelector('#exportPresetName')?.value || '';
+          const nextPrefs = saveExportPrefsFromPanel();
+          const preset = upsertExportPreset(presetName, nextPrefs);
+          renderExportPanel(currentReview, exportResult);
+          const select = document.getElementById('exportPresetSelect');
+          if (select) select.value = preset.id;
+          alert(`Saved preset: ${preset.name}`);
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+
+      document.getElementById('deleteExportPresetBtn')?.addEventListener('click', () => {
+        const presetId = panel.querySelector('#exportPresetSelect')?.value;
+        if (!presetId) {
+          alert('Choose a preset to delete.');
+          return;
+        }
+        const preset = getExportPresets().find(item => item.id === presetId);
+        if (!preset) {
+          alert('That preset no longer exists.');
+          return;
+        }
+        deleteExportPreset(presetId);
+        renderExportPanel(currentReview, exportResult);
+        alert(`Deleted preset: ${preset.name}`);
+      });
+
+      document.getElementById('exportReviewBtn')?.addEventListener('click', async () => {
+        try {
+          await exportCurrentReviewToITSM();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+
+      document.getElementById('exportReviewCopySummaryBtn')?.addEventListener('click', async () => {
+        const summary = buildExportSummaryText(review);
+        await copyTextToClipboard(summary, 'Handoff summary copied.');
+      });
+
+      document.getElementById('exportReviewDownloadFallbackBtn')?.addEventListener('click', () => {
+        const latestExport = getReviewExportHistory(review.review_id)[0] || null;
+        downloadManualFallbackBundle(review, latestExport);
+        alert('Downloaded manual fallback bundle (.json + .txt).');
+      });
+    }
+
+    function buildExportSummaryText(review) {
+      const summary = review?.report?.body?.executive_summary;
+      const header = review?.report?.header;
+      const selected = getSelectedWorklistItems(review, review === currentReview ? currentWorklistState : getStoredWorklistState(review));
+      return [
+        'Config Studio review handoff',
+        `Review ID: ${review?.review_id || 'unknown'}`,
+        `Hostname: ${header?.hostname || 'unknown'}`,
+        `Platform: ${header?.platform_detected || 'unknown'}`,
+        `Status: ${summary?.pass_fail_label || (review?.pass_fail ? 'PASS' : 'FAIL')}`,
+        `Risk score: ${summary?.risk_score ?? review?.risk_score?.score ?? 'unknown'}`,
+        `Findings: critical ${review?.summary?.critical_count || 0}, warning ${review?.summary?.warning_count || 0}, info ${review?.summary?.info_count || 0}, total ${review?.summary?.total_findings || 0}`,
+        `Config hash: ${review?.config_hash || 'unknown'}`,
+        selected.length ? `Selected worklist items: ${selected.map(item => item.finding.title).join(' | ')}` : 'Selected worklist items: none',
+      ].join('\n');
+    }
+
+    function buildManualFallbackText(review, exportEntry = null, prefs = getExportPrefs()) {
+      const intendedTarget = exportEntry?.target || getExportTargetLabelFromPrefs(prefs);
+      const intendedDestination = exportEntry?.destination || getExportDestinationLabelFromPrefs(prefs);
+      const fallbackSteps = [
+        'Manual fallback package',
+        `Intended destination: ${intendedTarget} · ${intendedDestination}`,
+        '',
+        buildExportSummaryText(review),
+      ];
+
+      if (exportEntry) {
+        fallbackSteps.push(
+          '',
+          `Last export attempt: ${exportEntry.target} · ${exportEntry.destination} · ${exportEntry.exportStatus} · ${exportEntry.timestamp}`
+        );
+        if ((exportEntry.failedDetails || []).length) {
+          fallbackSteps.push('Failure details:');
+          exportEntry.failedDetails.forEach(detail => {
+            fallbackSteps.push(`- ${detail.label}: HTTP ${detail.statusCode} · ${detail.detail}`);
+          });
+        }
+        if ((exportEntry.retryHints || []).length) {
+          fallbackSteps.push('Retry guidance:');
+          exportEntry.retryHints.forEach(hint => fallbackSteps.push(`- ${hint}`));
+        }
+      }
+
+      fallbackSteps.push(
+        '',
+        'Recommended operator fallback:',
+        '- Attach/export the review JSON from the batch card or export panel.',
+        '- Paste the handoff summary above into the ticket/change record manually.',
+        '- If the remote ITSM system is degraded, proceed with human approval flow and retry direct export later for audit completeness.'
+      );
+      return fallbackSteps.join('\n');
+    }
+
+    function buildManualFallbackBundle(review, exportEntry = null, prefs = getExportPrefs()) {
+      return {
+        generated_at_utc: new Date().toISOString(),
+        review_id: review?.review_id || 'unknown',
+        hostname: review?.report?.header?.hostname || 'unknown',
+        target: exportEntry?.target || getExportTargetLabelFromPrefs(prefs),
+        destination: exportEntry?.destination || getExportDestinationLabelFromPrefs(prefs),
+        handoff_summary: buildExportSummaryText(review),
+        fallback_note: buildManualFallbackText(review, exportEntry, prefs),
+        latest_export_attempt: exportEntry ? {
+          target: exportEntry.target,
+          destination: exportEntry.destination,
+          export_status: exportEntry.exportStatus,
+          timestamp: exportEntry.timestamp,
+          failed_details: exportEntry.failedDetails || [],
+          retry_hints: exportEntry.retryHints || [],
+        } : null,
+        report_json: review?.report || review,
+      };
+    }
+
+    function buildReviewDownloadBasename(review) {
+      const hostname = String(review?.report?.header?.hostname || 'device')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'device';
+      return `${hostname}-${review?.review_id || 'review'}`;
+    }
+
+    function downloadManualFallbackBundle(review, exportEntry = null, prefs = getExportPrefs()) {
+      const basename = buildReviewDownloadBasename(review);
+      const bundle = buildManualFallbackBundle(review, exportEntry, prefs);
+      downloadJson(`${basename}-manual-fallback-bundle.json`, bundle);
+      downloadText(`${basename}-manual-fallback-note.txt`, bundle.fallback_note);
+      return bundle;
+    }
+
+    function buildExportPayloadFromPrefs(configText, prefsOverride = null) {
+      const prefs = prefsOverride ? mergeReusableExportPrefs(prefsOverride, getExportPrefs()) : saveExportPrefsFromPanel();
+      if (!configText.trim()) {
+        throw new Error('Paste or load a config before exporting.');
+      }
+      if (!prefs.includePdf && !prefs.includeJson && !prefs.includeHtml) {
+        throw new Error('Choose at least one artifact format to attach.');
+      }
+
+      const selectedTemplate = getSelectedTemplate();
+      const payload = {
+        config_text: configText,
+        vendor: document.getElementById('vendor').value || null,
+        quick_pass: document.getElementById('quickPass').checked,
+        snippet_mode: document.getElementById('forceSnippet').checked ? true : null,
+        context_hint: document.getElementById('contextHint').value || null,
+        engineer_name: document.getElementById('engineerName').value || null,
+        template_id: selectedTemplate?.key || null,
+        template_name: selectedTemplate?.name || null,
+        template_version: selectedTemplate?.version || 'default',
+        template_rules: selectedTemplate?.rules || null,
+        target: prefs.target,
+        auth: prefs.authType === 'basic'
+          ? { auth_type: 'basic', username: prefs.username || null, password: prefs.token || null }
+          : { auth_type: 'bearer', token: prefs.token || null },
+        include_pdf: prefs.includePdf,
+        include_json: prefs.includeJson,
+        include_html: prefs.includeHtml,
+        export_comment: prefs.exportComment || null,
+        attachment_prefix: prefs.attachmentPrefix || 'config-studio-review',
+      };
+
+      if (prefs.target === 'jira') {
+        if (!prefs.jiraBaseUrl || !prefs.jiraIssueKey) {
+          throw new Error('Jira export needs both the base URL and issue key.');
+        }
+        payload.jira = {
+          base_url: prefs.jiraBaseUrl,
+          issue_key: prefs.jiraIssueKey,
+          add_comment: prefs.jiraAddComment,
+        };
+      } else if (prefs.target === 'servicenow') {
+        if (!prefs.serviceNowInstanceUrl || !prefs.serviceNowRecordSysId) {
+          throw new Error('ServiceNow export needs both the instance URL and record sys_id.');
+        }
+        payload.service_now = {
+          instance_url: prefs.serviceNowInstanceUrl,
+          table_name: prefs.serviceNowTableName || 'change_request',
+          record_sys_id: prefs.serviceNowRecordSysId,
+          update_work_notes: prefs.serviceNowUpdateWorkNotes,
+          update_short_description: prefs.serviceNowUpdateShortDescription,
+        };
+      } else {
+        if (!prefs.webhookUrl) {
+          throw new Error('Webhook export needs a destination URL.');
+        }
+        let parsedHeaders = {};
+        if (prefs.webhookHeadersText.trim()) {
+          try {
+            parsedHeaders = JSON.parse(prefs.webhookHeadersText);
+          } catch {
+            throw new Error('Webhook headers must be valid JSON.');
+          }
+          if (!parsedHeaders || Array.isArray(parsedHeaders) || typeof parsedHeaders !== 'object') {
+            throw new Error('Webhook headers must be a JSON object of header names to values.');
+          }
+        }
+        payload.auth = null;
+        payload.webhook = {
+          url: prefs.webhookUrl,
+          headers: parsedHeaders,
+          include_review_payload: prefs.webhookIncludeReviewPayload,
+          embed_artifacts: prefs.webhookEmbedArtifacts,
+        };
+      }
+
+      if (prefs.target !== 'webhook' && prefs.authType === 'basic' && (!prefs.username || !prefs.token)) {
+        throw new Error('Basic auth needs both username and password.');
+      }
+      if (prefs.target !== 'webhook' && prefs.authType === 'bearer' && !prefs.token) {
+        throw new Error('Bearer export needs a token.');
+      }
+
+      return payload;
+    }
+
+    async function submitReviewExport(configText, review = currentReview, { renderPanel = true, exportPrefsOverride = null } = {}) {
+      const base = await getEngineBaseUrl();
+      const effectivePrefs = exportPrefsOverride ? mergeReusableExportPrefs(exportPrefsOverride, getExportPrefs()) : getExportPrefs();
+      const payload = buildExportPayloadFromPrefs(configText, exportPrefsOverride);
+      const statusPanel = document.getElementById('exportStatusPanel');
+      if (renderPanel && statusPanel) {
+        statusPanel.innerHTML = '<div class="finding info"><h4>Export in progress</h4><p>Sending review artifacts to the selected change record...</p></div>';
+      }
+      const res = await fetch(`${base}/api/export/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ENGINE_API_KEY },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text() || `ITSM export failed with ${res.status}`);
+      const data = await res.json();
+      if (review?.review_id) {
+        recordExportHistory(review, data, effectivePrefs);
+        updateBatchProgress(review.review_id, {
+          exported: true,
+          exportTarget: effectivePrefs.target === 'servicenow'
+            ? 'ServiceNow'
+            : effectivePrefs.target === 'webhook'
+              ? 'Webhook'
+              : 'Jira Cloud',
+          lastAction: effectivePrefs.target === 'webhook' ? 'exported via webhook' : 'exported to ITSM',
+        });
+      }
+      if (renderPanel) {
+        renderExportPanel(data.review || review, data);
+      }
+      if (currentBatchReview?.reviews?.length) {
+        renderBatchReviewResults(currentBatchReview);
+      }
+      return data;
+    }
+
+    async function exportCurrentReviewToITSM() {
+      if (!currentReview) {
+        throw new Error('Run or load a review first.');
+      }
+      return submitReviewExport(document.getElementById('configText').value, currentReview, { renderPanel: true });
+    }
+
+    async function exportBatchReviewItemToITSM(item, button = null, { renderPanel = false, successMessage = 'Review exported to the current ITSM target.', exportPrefsOverride = null } = {}) {
+      if (!item?.review) return;
+      const reviewId = item.review.review_id;
+      const originalText = button?.textContent || '';
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Exporting...';
+      }
+      try {
+        await submitReviewExport(item.config_text || '', item.review, { renderPanel, exportPrefsOverride });
+        if (successMessage) alert(successMessage);
+      } catch (err) {
+        updateBatchProgress(reviewId, { lastAction: 'ITSM export failed' });
+        throw err;
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      }
+    }
+
+    function renderSnippetInfo(snippetInfo, vendor) {
+      const el = document.getElementById('snippetInfo');
+      const refs = (snippetInfo.external_references || []).map(r => `<li>${escapeHtml(r)}</li>`).join('');
+      const suppressed = (snippetInfo.suppressed_checks || []).map(r => `<li>${escapeHtml(r)}</li>`).join('');
+      el.innerHTML = `
+        <div class="finding info">
+          <h4>Detection</h4>
+          <p><strong>Vendor:</strong> ${escapeHtml(vendor.vendor)} ${vendor.os_version ? escapeHtml(vendor.os_version) : ''}</p>
+          <p><strong>Snippet mode:</strong> ${snippetInfo.is_snippet ? 'Yes' : 'No'}</p>
+          <p><strong>Detected section:</strong> ${escapeHtml(snippetInfo.detected_section || 'None')}</p>
+          ${suppressed ? `<p><strong>Suppressed checks</strong></p><ul>${suppressed}</ul>` : ''}
+          ${refs ? `<p><strong>External references to verify</strong></p><ul>${refs}</ul>` : ''}
+        </div>
+      `;
+    }
+
+    function renderQueryHistory() {
+      const panel = document.getElementById('queryHistoryPanel');
+      const history = getQueryHistory();
+      if (!history.length) {
+        panel.innerHTML = '<p class="muted">No saved single-config queries yet for this session.</p>';
+        return;
+      }
+      panel.innerHTML = `
+        <div class="worklist-item-header" style="margin-bottom:10px;">
+          <h4 style="margin:0;">Recent single-config queries</h4>
+          <button id="clearQueryHistoryBtn" class="secondary-action">Clear history</button>
+        </div>
+        <div class="history-list">
+          ${history.map((item, index) => `
+            <div class="history-item">
+              <div><strong>${escapeHtml(item.question)}</strong></div>
+              <div class="history-meta">${escapeHtml(item.timestamp)} · ${escapeHtml(item.lineSummary || 'No line references')} · ${escapeHtml(item.hostname || 'Unknown device')}</div>
+              ${item.answer ? `<p style="margin:8px 0 0;">${escapeHtml(item.answer)}</p>` : ''}
+              <div class="worklist-actions">
+                <button data-history-index="${index}" data-history-action="reuse">Reuse query</button>
+                <button data-history-index="${index}" data-history-action="rerun">Rerun now</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('clearQueryHistoryBtn')?.addEventListener('click', () => {
+        clearHistoryEntries(SESSION_STORAGE_KEYS.queryHistory, renderQueryHistory);
+      });
+      panel.querySelectorAll('[data-history-action]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const item = history[Number(button.dataset.historyIndex)];
+          if (!item) return;
+          document.getElementById('questionInput').value = item.question;
+          if (button.dataset.historyAction === 'rerun') {
+            try {
+              await askQuestion();
+            } catch (err) {
+              alert(err.message);
+            }
+          }
+        });
+      });
+    }
+
+    function renderMultiQueryHistory() {
+      const panel = document.getElementById('multiQueryHistoryPanel');
+      const history = getMultiQueryHistory();
+      if (!history.length) {
+        panel.innerHTML = '<p class="muted">No saved cross-config queries yet for this session.</p>';
+        return;
+      }
+      panel.innerHTML = `
+        <div class="worklist-item-header" style="margin-bottom:10px;">
+          <h4 style="margin:0;">Recent cross-config queries</h4>
+          <button id="clearMultiQueryHistoryBtn" class="secondary-action">Clear history</button>
+        </div>
+        <div class="history-list">
+          ${history.map((item, index) => `
+            <div class="history-item">
+              <div><strong>${escapeHtml(item.question)}</strong></div>
+              <div class="history-meta">${escapeHtml(item.timestamp)} · ${escapeHtml(item.matchSummary || 'No matching devices')} · ${escapeHtml(item.scopeLabel || 'Unknown scope')}</div>
+              ${item.answer ? `<p style="margin:8px 0 0;">${escapeHtml(item.answer)}</p>` : ''}
+              <div class="worklist-actions">
+                <button data-multi-history-index="${index}" data-multi-history-action="reuse">Reuse query</button>
+                <button data-multi-history-index="${index}" data-multi-history-action="rerun">Rerun now</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('clearMultiQueryHistoryBtn')?.addEventListener('click', () => {
+        clearHistoryEntries(SESSION_STORAGE_KEYS.multiQueryHistory, renderMultiQueryHistory);
+      });
+      panel.querySelectorAll('[data-multi-history-action]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const item = history[Number(button.dataset.multiHistoryIndex)];
+          if (!item) return;
+          document.getElementById('multiQuestionInput').value = item.question;
+          if (button.dataset.multiHistoryAction === 'rerun') {
+            try {
+              await askMultiConfigQuestion();
+            } catch (err) {
+              alert(err.message);
+            }
+          }
+        });
+      });
+    }
+
+    function filterFindings(findings) {
+      const mode = document.getElementById('severityFilter').value;
+      if (mode === 'all') return findings;
+      if (mode === 'critical') return findings.filter(f => f.severity === 'critical');
+      if (mode === 'warning') return findings.filter(f => ['critical', 'warning'].includes(f.severity));
+      if (mode === 'info') return findings.filter(f => f.severity === 'info');
+      return findings;
+    }
+
+    function setNavigatorFocus(startLine, endLine = startLine) {
+      currentFocusRange = { startLine, endLine };
+      const viewer = document.getElementById('configViewer');
+      if (!viewer) return;
+
+      viewer.querySelectorAll('.config-line').forEach(line => {
+        const lineNumber = Number(line.dataset.line);
+        line.classList.toggle('selected', lineNumber >= startLine && lineNumber <= endLine);
+        line.classList.toggle('focus', lineNumber === startLine);
+      });
+
+      const anchor = viewer.querySelector(`.config-line[data-line="${startLine}"]`);
+      if (anchor) {
+        anchor.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+
+      const state = document.getElementById('navigatorState');
+      state.innerHTML = `<strong>Focused lines ${startLine}-${endLine}</strong> from the selected finding.`;
+    }
+
+    async function copyTextToClipboard(text, successMessage) {
+      try {
+        await navigator.clipboard.writeText(text);
+        alert(successMessage);
+      } catch {
+        alert('Clipboard copy failed in this browser. You can still copy it manually.');
+      }
+    }
+
+    function renderConfigNavigator(configText) {
+      const navigator = document.getElementById('configNavigator');
+      const state = document.getElementById('navigatorState');
+      const lines = configText.split('\n');
+      if (!configText.trim()) {
+        navigator.innerHTML = '';
+        state.textContent = 'Run an analysis to load a line-numbered config view.';
+        return;
+      }
+
+      state.innerHTML = `<strong>${lines.length} lines loaded.</strong> Click “Jump to config” on a finding to center that block.`;
+      navigator.innerHTML = `
+        <div class="config-viewer-shell">
+          <div class="config-viewer-toolbar">
+            <div class="muted">Submitted config with line numbers</div>
+            <button id="copyConfigBtn" class="secondary-action">Copy full config</button>
+          </div>
+          <div id="configViewer" class="config-viewer">
+            ${lines.map((line, index) => `
+              <div class="config-line" data-line="${index + 1}">
+                <div class="config-line-number">${index + 1}</div>
+                <div class="config-line-text">${escapeHtml(line || ' ')}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('copyConfigBtn').addEventListener('click', () => copyTextToClipboard(configText, 'Full config copied.'));
+      if (currentFocusRange) {
+        setNavigatorFocus(currentFocusRange.startLine, currentFocusRange.endLine);
+      }
+    }
+
+    function renderFindings(findings) {
+      const list = document.getElementById('findingsList');
+      const filtered = filterFindings(findings).map((finding, reviewIndex) => ({
+        finding,
+        reviewIndex,
+      }));
+      if (!filtered.length) {
+        list.innerHTML = '<div class="muted">No findings match the current filter.</div>';
+        return;
+      }
+      list.innerHTML = filtered.map(({ finding: f, reviewIndex }) => `
+        <div class="finding ${f.severity}">
+          <h4>${escapeHtml(f.title)} <span class="badge ${f.severity}">${escapeHtml(f.severity)}</span></h4>
+          <p><strong>Category:</strong> ${escapeHtml(f.category)} · <strong>Lines:</strong> ${f.line_start}-${f.line_end}</p>
+          <p>${escapeHtml(f.description)}</p>
+          <label class="mini-pill"><input type="checkbox" data-worklist-toggle-index="${reviewIndex}" ${currentWorklistState[getFindingKey(f, reviewIndex)]?.selected ? 'checked' : ''} /> Add to operator worklist</label>
+          ${f.compliance_tags?.length ? `<p><strong>Compliance tags:</strong> ${f.compliance_tags.map(escapeHtml).join(', ')}</p>` : ''}
+          ${f.reference_url ? `<p><strong>Reference:</strong> <a href="${escapeHtml(f.reference_url)}" target="_blank">${escapeHtml(f.reference_url)}</a></p>` : ''}
+          ${f.config_context ? `<p><strong>Config context</strong></p><pre>${escapeHtml(f.config_context)}</pre>` : ''}
+          ${f.remediation ? `<p><strong>Remediation</strong></p><pre>${escapeHtml(f.remediation)}</pre>` : ''}
+          ${f.rollback ? `<p><strong>Rollback</strong></p><pre>${escapeHtml(f.rollback)}</pre>` : ''}
+          <div class="finding-toolbar">
+            <button class="secondary-action" data-jump-index="${reviewIndex}">Jump to config</button>
+            <button class="secondary-action" data-worklist-done-index="${reviewIndex}">${currentWorklistState[getFindingKey(f, reviewIndex)]?.done ? 'Mark not done' : 'Mark done'}</button>
+            ${f.remediation ? `<button class="secondary-action" data-copy-remediation-index="${reviewIndex}">Copy remediation</button>` : ''}
+            ${f.rollback ? `<button class="secondary-action" data-copy-rollback-index="${reviewIndex}">Copy rollback</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+
+      list.querySelectorAll('[data-worklist-toggle-index]').forEach(button => {
+        button.addEventListener('change', () => {
+          const index = Number(button.dataset.worklistToggleIndex);
+          const finding = findings[index];
+          if (!finding) return;
+          updateWorklistItem(finding, index, { selected: button.checked, done: false });
+        });
+      });
+
+      list.querySelectorAll('[data-jump-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const finding = findings[Number(button.dataset.jumpIndex)];
+          if (!finding) return;
+          setNavigatorFocus(finding.line_start, finding.line_end);
+        });
+      });
+
+      list.querySelectorAll('[data-worklist-done-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const index = Number(button.dataset.worklistDoneIndex);
+          const finding = findings[index];
+          if (!finding) return;
+          const key = getFindingKey(finding, index);
+          updateWorklistItem(finding, index, { selected: true, done: !currentWorklistState[key]?.done });
+        });
+      });
+
+      list.querySelectorAll('[data-copy-remediation-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const finding = findings[Number(button.dataset.copyRemediationIndex)];
+          if (!finding?.remediation) return;
+          copyTextToClipboard(finding.remediation, 'Remediation copied.');
+        });
+      });
+
+      list.querySelectorAll('[data-copy-rollback-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const finding = findings[Number(button.dataset.copyRollbackIndex)];
+          if (!finding?.rollback) return;
+          copyTextToClipboard(finding.rollback, 'Rollback copied.');
+        });
+      });
+    }
+
+    async function analyzeConfig() {
+      const base = await getEngineBaseUrl();
+      const payload = {
+        config_text: document.getElementById('configText').value,
+        vendor: document.getElementById('vendor').value || null,
+        quick_pass: document.getElementById('quickPass').checked,
+        snippet_mode: document.getElementById('forceSnippet').checked ? true : null,
+        context_hint: document.getElementById('contextHint').value || null,
+        engineer_name: document.getElementById('engineerName').value || null,
+        template_id: getSelectedTemplate()?.key || null,
+        template_name: getSelectedTemplate()?.name || null,
+        template_version: getSelectedTemplate()?.version || 'default',
+        template_rules: getSelectedTemplate()?.rules || null,
+      };
+
+      const res = await fetch(`${base}/api/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ENGINE_API_KEY },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(await res.text() || `Analyze failed with ${res.status}`);
+
+      const data = await res.json();
+      currentReview = data;
+      hydrateWorklistState(data);
+      document.getElementById('summaryState').innerHTML = `
+        <strong>Review complete.</strong><br>
+        ${escapeHtml(data.risk_score.benchmark_label)}<br>
+        Config hash: <code>${escapeHtml(data.config_hash.slice(0, 16))}...</code>
+      `;
+      renderStats(data.summary, data.risk_score, data.pass_fail);
+      renderReportHeader(data.report);
+      renderQuickPassPanel(data);
+      renderTemplateCompliance(data.report);
+      renderChangeScript(data.report);
+      renderWorklist(data);
+      renderExportPanel(data);
+      renderBatchWorkspaceNavigator();
+      renderSnippetInfo(data.snippet_info, data.vendor);
+      currentFocusRange = null;
+      renderFindings(data.findings);
+      renderConfigNavigator(payload.config_text);
+      document.getElementById('queryPanel').style.display = 'block';
+    }
+
+    async function askQuestion() {
+      if (!currentReview) return;
+      const base = await getEngineBaseUrl();
+      const configText = document.getElementById('configText').value;
+      const question = document.getElementById('questionInput').value.trim();
+      if (!question) return;
+
+      const res = await fetch(`${base}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ENGINE_API_KEY },
+        body: JSON.stringify({ config_text: configText, question, vendor: document.getElementById('vendor').value || null }),
+      });
+
+      if (!res.ok) throw new Error(await res.text() || `Query failed with ${res.status}`);
+      const data = await res.json();
+      rememberQuery({
+        question,
+        timestamp: new Date().toLocaleString(),
+        lineSummary: data.line_references?.length ? `Lines ${data.line_references.join(', ')}` : 'No line references',
+        answer: data.answer,
+        hostname: currentReview?.vendor?.hostname || currentReview?.report?.header?.hostname || 'Current review',
+      });
+      const el = document.getElementById('queryAnswer');
+      el.style.display = 'block';
+      el.innerHTML = `
+        <h4>Answer</h4>
+        <p>${escapeHtml(data.answer).replaceAll('\n', '<br>')}</p>
+        <p><strong>Line references:</strong> ${data.line_references.join(', ') || 'None'}</p>
+      `;
+    }
+
+    function loadReviewIntoWorkspace(review, configText) {
+      currentReview = review;
+      if (review?.review_id) {
+        updateBatchProgress(review.review_id, { opened: true, lastAction: 'opened in workspace' });
+      }
+      document.getElementById('configText').value = configText || '';
+      if (review.vendor?.vendor && review.vendor.vendor !== 'unknown') {
+        document.getElementById('vendor').value = review.vendor.vendor;
+      }
+      hydrateWorklistState(review);
+      document.getElementById('summaryState').innerHTML = `
+        <strong>Review loaded into workspace.</strong><br>
+        ${escapeHtml(review.risk_score.benchmark_label)}<br>
+        Config hash: <code>${escapeHtml(review.config_hash.slice(0, 16))}...</code>
+      `;
+      renderStats(review.summary, review.risk_score, review.pass_fail);
+      renderReportHeader(review.report);
+      renderQuickPassPanel(review);
+      renderTemplateCompliance(review.report);
+      renderChangeScript(review.report);
+      renderWorklist(review);
+      renderExportPanel(review);
+      renderSnippetInfo(review.snippet_info, review.vendor);
+      renderFindings(review.findings);
+      currentFocusRange = null;
+      renderConfigNavigator(configText || '');
+      document.getElementById('queryPanel').style.display = 'block';
+      const firstCritical = (review.findings || []).find(finding => finding.severity === 'critical');
+      if (firstCritical) {
+        setNavigatorFocus(firstCritical.line_start, firstCritical.line_end);
+      }
+      if (currentBatchReview?.reviews?.length) {
+        renderBatchReviewResults(currentBatchReview);
+      } else {
+        renderBatchWorkspaceNavigator();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function getBatchPriorityScore(item) {
+      const review = item.review;
+      return (review.summary.critical_count * 1000) + (review.summary.warning_count * 100) + review.risk_score.score;
+    }
+
+    function getBatchQueueState(target = document.getElementById('batchReviewResults')) {
+      return {
+        filter: target?.querySelector('#batchQueueFilter')?.value || 'attention',
+        search: target?.querySelector('#batchQueueSearch')?.value.trim().toLowerCase() || '',
+      };
+    }
+
+    function getVisibleBatchQueueItems(data = currentBatchReview) {
+      if (!data?.reviews?.length) return [];
+      const batchProgress = getBatchProgressState();
+      const orderedReviews = [...(data.reviews || [])].sort((a, b) => getBatchPriorityScore(b) - getBatchPriorityScore(a));
+      const queueState = getBatchQueueState();
+      return orderedReviews.filter(item => {
+        const progress = batchProgress[item.review.review_id] || {};
+        const latestExport = getReviewExportHistory(item.review.review_id)[0];
+        const hasExportIssue = Boolean(latestExport && !['success', 'unknown'].includes(latestExport.exportStatus));
+        const matchesFilter = (() => {
+          if (queueState.filter === 'critical') return item.review.summary.critical_count > 0;
+          if (queueState.filter === 'failing') return !item.review.pass_fail;
+          if (queueState.filter === 'pending') return !progress.done;
+          if (queueState.filter === 'export-issues') return hasExportIssue;
+          if (queueState.filter === 'exported') return Boolean(progress.exported);
+          if (queueState.filter === 'done') return Boolean(progress.done);
+          if (queueState.filter === 'pass-only') return item.review.pass_fail;
+          if (queueState.filter === 'attention') {
+            return item.review.summary.critical_count > 0 || !item.review.pass_fail || !progress.done || hasExportIssue;
+          }
+          return true;
+        })();
+        if (!matchesFilter) return false;
+        if (!queueState.search) return true;
+        const review = item.review;
+        const searchCorpus = [
+          item.filename,
+          review.report?.header?.hostname,
+          review.vendor?.vendor,
+          review.vendor?.os_version,
+          latestExport?.target,
+          latestExport?.destination,
+          ...(review.findings || []).slice(0, 5).map(finding => finding.title),
+        ].filter(Boolean).join(' ').toLowerCase();
+        return searchCorpus.includes(queueState.search);
+      });
+    }
+
+    function findNextPendingBatchItem(items, currentIndex) {
+      if (!items.length) return null;
+      const batchProgress = getBatchProgressState();
+      for (let step = 1; step <= items.length; step += 1) {
+        const index = (currentIndex + step) % items.length;
+        const reviewId = items[index]?.review?.review_id;
+        if (reviewId && !batchProgress[reviewId]?.done) {
+          return { item: items[index], index };
+        }
+      }
+      return null;
+    }
+
+    function renderBatchWorkspaceNavigator() {
+      const panel = document.getElementById('batchWorkspaceNavigator');
+      if (!panel) return;
+      if (!currentBatchReview?.reviews?.length || !currentReview?.review_id) {
+        panel.innerHTML = '';
+        return;
+      }
+      const visibleItems = getVisibleBatchQueueItems(currentBatchReview);
+      const currentIndex = visibleItems.findIndex(item => item.review.review_id === currentReview.review_id);
+      if (currentIndex === -1) {
+        panel.innerHTML = '';
+        return;
+      }
+      const batchProgress = getBatchProgressState();
+      const currentItem = visibleItems[currentIndex];
+      const previousItem = visibleItems[(currentIndex - 1 + visibleItems.length) % visibleItems.length] || null;
+      const nextItem = visibleItems[(currentIndex + 1) % visibleItems.length] || null;
+      const nextPending = findNextPendingBatchItem(visibleItems, currentIndex);
+      const pendingVisibleCount = visibleItems.filter(item => !batchProgress[item.review.review_id]?.done).length;
+      const failingVisibleCount = visibleItems.filter(item => !item.review.pass_fail).length;
+      const criticalVisibleCount = visibleItems.filter(item => item.review.summary.critical_count > 0).length;
+      panel.innerHTML = `
+        <div class="finding info">
+          <h4>Batch queue navigator</h4>
+          <p><strong>${escapeHtml(currentItem.filename)}</strong> is loaded from the current ZIP triage queue.</p>
+          <p><strong>Visible position:</strong> ${currentIndex + 1} of ${visibleItems.length} under the current batch filter/search · ${criticalVisibleCount} critical · ${failingVisibleCount} failing · ${pendingVisibleCount} pending handoff</p>
+          <p class="history-meta">Use this to walk the visible queue from inside the workspace instead of bouncing back to the batch panel after every device.</p>
+          <div class="finding-toolbar">
+            <button id="batchWorkspacePrevBtn" class="secondary-action" ${visibleItems.length > 1 ? '' : 'disabled'}>Open previous visible review</button>
+            <button id="batchWorkspaceNextBtn" class="secondary-action" ${visibleItems.length > 1 ? '' : 'disabled'}>Open next visible review</button>
+            <button id="batchWorkspaceNextPendingBtn" class="secondary-action" ${nextPending ? '' : 'disabled'}>Open next visible pending handoff</button>
+            <button id="batchWorkspaceDoneNextBtn" class="secondary-action" ${nextPending ? '' : 'disabled'}>Mark current handoff done + open next pending</button>
+          </div>
+        </div>
+      `;
+      panel.querySelector('#batchWorkspacePrevBtn')?.addEventListener('click', () => {
+        if (previousItem) loadReviewIntoWorkspace(previousItem.review, previousItem.config_text || '');
+      });
+      panel.querySelector('#batchWorkspaceNextBtn')?.addEventListener('click', () => {
+        if (nextItem) loadReviewIntoWorkspace(nextItem.review, nextItem.config_text || '');
+      });
+      panel.querySelector('#batchWorkspaceNextPendingBtn')?.addEventListener('click', () => {
+        if (nextPending?.item) loadReviewIntoWorkspace(nextPending.item.review, nextPending.item.config_text || '');
+      });
+      panel.querySelector('#batchWorkspaceDoneNextBtn')?.addEventListener('click', () => {
+        updateBatchProgress(currentReview.review_id, { done: true, lastAction: 'marked handoff done from workspace navigator' });
+        if (nextPending?.item) {
+          loadReviewIntoWorkspace(nextPending.item.review, nextPending.item.config_text || '');
+        } else {
+          renderBatchReviewResults(currentBatchReview);
+        }
+      });
+    }
+
+    function renderBatchReviewResults(data) {
+      currentBatchReview = data;
+      const target = document.getElementById('batchReviewResults');
+      const batchProgress = getBatchProgressState();
+      const currentExportPrefs = getExportPrefs();
+      const currentExportReadiness = getExportReadiness(currentExportPrefs);
+      const orderedReviews = [...(data.reviews || [])].sort((a, b) => getBatchPriorityScore(b) - getBatchPriorityScore(a));
+      const queueState = getBatchQueueState(target);
+      const existingFilter = queueState.filter;
+      const existingSearch = queueState.search;
+      const batchReviewIds = orderedReviews.map(item => item.review.review_id).filter(Boolean);
+      const latestSuccessfulExport = findLatestSuccessfulExportEntry(batchReviewIds);
+      const criticalItems = orderedReviews.filter(item => item.review.summary.critical_count > 0);
+      const failingItems = orderedReviews.filter(item => !item.review.pass_fail);
+      const pendingItems = orderedReviews.filter(item => !batchProgress[item.review.review_id]?.done);
+      const failedExportItems = orderedReviews.filter(item => {
+        const latestExport = getReviewExportHistory(item.review.review_id)[0];
+        return latestExport && !['success', 'unknown'].includes(latestExport.exportStatus);
+      });
+      const matchesBatchQueueFilter = (item) => {
+        const progress = batchProgress[item.review.review_id] || {};
+        const latestExport = getReviewExportHistory(item.review.review_id)[0];
+        const hasExportIssue = Boolean(latestExport && !['success', 'unknown'].includes(latestExport.exportStatus));
+        if (existingFilter === 'critical') return item.review.summary.critical_count > 0;
+        if (existingFilter === 'failing') return !item.review.pass_fail;
+        if (existingFilter === 'pending') return !progress.done;
+        if (existingFilter === 'export-issues') return hasExportIssue;
+        if (existingFilter === 'exported') return Boolean(progress.exported);
+        if (existingFilter === 'done') return Boolean(progress.done);
+        if (existingFilter === 'pass-only') return item.review.pass_fail;
+        if (existingFilter === 'attention') {
+          return item.review.summary.critical_count > 0 || !item.review.pass_fail || !progress.done || hasExportIssue;
+        }
+        return true;
+      };
+      const matchesBatchQueueSearch = (item) => {
+        if (!existingSearch) return true;
+        const review = item.review;
+        const latestExport = getReviewExportHistory(review.review_id)[0];
+        const searchCorpus = [
+          item.filename,
+          review.report?.header?.hostname,
+          review.vendor?.vendor,
+          review.vendor?.os_version,
+          latestExport?.target,
+          latestExport?.destination,
+          ...(review.findings || []).slice(0, 5).map(finding => finding.title),
+        ].filter(Boolean).join(' ').toLowerCase();
+        return searchCorpus.includes(existingSearch);
+      };
+      const filteredReviews = orderedReviews.filter(item => matchesBatchQueueFilter(item) && matchesBatchQueueSearch(item));
+      const filteredCriticalItems = filteredReviews.filter(item => item.review.summary.critical_count > 0);
+      const filteredFailingItems = filteredReviews.filter(item => !item.review.pass_fail);
+      const filteredPendingItems = filteredReviews.filter(item => !(batchProgress[item.review.review_id] || {}).done);
+      const filteredFailedExportItems = filteredReviews.filter(item => {
+        const latestExport = getReviewExportHistory(item.review.review_id)[0];
+        return latestExport && !['success', 'unknown'].includes(latestExport.exportStatus);
+      });
+      const filteredCriticalCount = filteredCriticalItems.length;
+      const filteredFailingCount = filteredFailingItems.length;
+      const filteredPendingCount = filteredPendingItems.length;
+      const filteredExportIssueCount = filteredFailedExportItems.length;
+      const filteredHighestRiskItem = filteredReviews[0] || null;
+      const reviewCards = filteredReviews.map(item => {
+        const review = item.review;
+        const progress = batchProgress[review.review_id] || {};
+        const exportHistory = getReviewExportHistory(review.review_id);
+        const latestExport = exportHistory[0];
+        const exportHistoryHtml = renderExportHistoryList(review.review_id);
+        const latestExportAlignmentBadge = latestExport
+          ? buildDestinationAlignmentBadge(latestExport, currentExportPrefs, { matchLabel: 'latest export matches current target', staleLabel: 'latest export is stale vs current target' })
+          : '';
+        const statusPills = [
+          currentReview?.review_id === review.review_id ? '<span class="mini-pill">loaded in workspace</span>' : '',
+          progress.opened ? '<span class="mini-pill">opened</span>' : '',
+          progress.exported ? `<span class="mini-pill">exported${progress.exportTarget ? ` to ${escapeHtml(progress.exportTarget)}` : ''}</span>` : '',
+          progress.done ? '<span class="mini-pill">handoff done</span>' : '',
+          latestExportAlignmentBadge,
+        ].filter(Boolean).join(' ');
+        const latestExportFailurePanel = latestExport && !['success', 'unknown'].includes(latestExport.exportStatus)
+          ? `
+            <div class="finding ${latestExport.exportStatus === 'failed' ? 'critical' : 'warning'}" style="margin-top:10px; margin-bottom:10px;">
+              <h4>Export needs attention</h4>
+              <p><strong>Last attempt:</strong> ${escapeHtml(latestExport.target)} · ${escapeHtml(latestExport.destination)} · ${escapeHtml(latestExport.exportStatus)} · ${escapeHtml(latestExport.timestamp)}</p>
+              ${(latestExport.failedDetails || []).length
+                ? `<ul>${latestExport.failedDetails.map(detail => `<li>${escapeHtml(detail.label)} — HTTP ${escapeHtml(detail.statusCode)} · ${escapeHtml(detail.detail)}</li>`).join('')}</ul>`
+                : '<p>No component-level detail was captured for that failure.</p>'}
+              ${(latestExport.retryHints || []).length
+                ? `<p><strong>Retry guidance</strong></p><ul>${latestExport.retryHints.map(hint => `<li>${escapeHtml(hint)}</li>`).join('')}</ul>`
+                : '<p class="muted">Retry using the current export target after correcting the destination details or credentials.</p>'}
+            </div>
+          `
+          : '';
+        return `
+          <div class="finding ${review.pass_fail ? 'info' : 'critical'}">
+            <h4>${escapeHtml(item.filename)}</h4>
+            <p><strong>${review.pass_fail ? 'PASS' : 'FAIL'}</strong> · ${escapeHtml(review.vendor.vendor)}${review.vendor.os_version ? ` ${escapeHtml(review.vendor.os_version)}` : ''}</p>
+            <p><strong>Hostname:</strong> ${escapeHtml(review.report.header.hostname || 'Unknown')} · <strong>Risk:</strong> ${review.risk_score.score} (${escapeHtml(review.risk_score.grade)})</p>
+            <p><strong>Findings:</strong> ${review.summary.total_findings} total · ${review.summary.critical_count} critical · ${review.summary.warning_count} warning · ${review.summary.info_count} info</p>
+            ${statusPills ? `<p><strong>Change-window status:</strong> ${statusPills}</p>` : '<p><strong>Change-window status:</strong> not opened yet</p>'}
+            ${progress.updatedAt ? `<p class="history-meta">Last action: ${escapeHtml(progress.lastAction || 'updated')} · ${escapeHtml(progress.updatedAt)}</p>` : ''}
+            ${latestExport ? `<p class="history-meta"><strong>Latest export:</strong> ${escapeHtml(latestExport.target)} · ${escapeHtml(latestExport.destination)} · ${escapeHtml(latestExport.exportStatus)} · ${escapeHtml(latestExport.timestamp)}</p><p class="history-meta">${escapeHtml(buildDestinationAlignmentNote(latestExport, currentExportPrefs, { prefix: 'Latest export' }))}</p>` : '<p class="history-meta">Latest export: none yet in this browser session.</p>'}
+            ${latestExportFailurePanel}
+            ${(review.findings || []).slice(0, 3).length ? `<ul>${review.findings.slice(0, 3).map(finding => `<li>${escapeHtml(finding.title)} (lines ${finding.line_start}-${finding.line_end})</li>`).join('')}</ul>` : '<p>No findings.</p>'}
+            <details style="margin-top:10px;">
+              <summary>Export history (${exportHistory.length})</summary>
+              ${exportHistoryHtml}
+            </details>
+            <div class="finding-toolbar">
+              <button class="secondary-action" data-batch-open-review-id="${escapeHtml(review.review_id)}">Open in workspace</button>
+              <button class="secondary-action" data-batch-copy-summary-review-id="${escapeHtml(review.review_id)}">Copy handoff summary</button>
+              <button class="secondary-action" data-batch-copy-fallback-review-id="${escapeHtml(review.review_id)}">Copy manual fallback</button>
+              <button class="secondary-action" data-batch-download-fallback-review-id="${escapeHtml(review.review_id)}">Download fallback bundle</button>
+              <button class="secondary-action" data-batch-export-review-id="${escapeHtml(review.review_id)}">Export report JSON</button>
+              <button class="secondary-action" data-batch-itsm-export-review-id="${escapeHtml(review.review_id)}" ${currentExportReadiness.ready ? '' : 'disabled'}>${latestExport && !['success', 'unknown'].includes(latestExport.exportStatus) ? `Retry export to ${escapeHtml(currentExportReadiness.targetLabel)}` : `Export to ${escapeHtml(currentExportReadiness.targetLabel)}`}</button>
+              <button class="secondary-action" data-batch-duplicate-export-review-id="${escapeHtml(review.review_id)}" ${latestSuccessfulExport ? '' : 'disabled'}>${latestSuccessfulExport ? 'Duplicate last successful handoff' : 'Need a successful handoff first'}</button>
+              ${latestSuccessfulExport ? `<span class="mini-pill">${escapeHtml(buildDestinationAlignmentNote(latestSuccessfulExport, currentExportPrefs, { prefix: 'Duplicate source' }))}</span>` : ''}
+              <button class="secondary-action" data-batch-toggle-done-review-id="${escapeHtml(review.review_id)}">${progress.done ? 'Mark handoff pending' : 'Mark handoff done'}</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const archiveSummary = data.archive_summary || null;
+      const skippedEntries = archiveSummary?.skipped_entries || [];
+      const skippedCount = (archiveSummary?.skipped_directory_count || 0)
+        + (archiveSummary?.skipped_non_config_count || 0)
+        + (archiveSummary?.skipped_empty_count || 0)
+        + (archiveSummary?.skipped_undecodable_count || 0);
+      const archiveSummaryPanel = archiveSummary ? `
+        <div class="finding ${(skippedCount || (archiveSummary.readable_config_count || 0) < 2) ? 'warning' : 'info'}" style="margin-top:12px;">
+          <h4>ZIP intake summary</h4>
+          <p><strong>Reviewed:</strong> ${archiveSummary.readable_config_count || 0} readable config${(archiveSummary.readable_config_count || 0) === 1 ? '' : 's'} from ${archiveSummary.archive_member_count || 0} archive entr${(archiveSummary.archive_member_count || 0) === 1 ? 'y' : 'ies'}${archiveSummary.zip_filename ? ` in ${escapeHtml(archiveSummary.zip_filename)}` : ''}.</p>
+          <p><strong>Skipped:</strong> ${skippedCount} entr${skippedCount === 1 ? 'y' : 'ies'} · ${(archiveSummary.skipped_non_config_count || 0)} non-config/binary · ${(archiveSummary.skipped_empty_count || 0)} empty · ${(archiveSummary.skipped_undecodable_count || 0)} undecodable · ${(archiveSummary.skipped_directory_count || 0)} directories</p>
+          <p><strong>Extracted text reviewed:</strong> ${escapeHtml(formatBytes(archiveSummary.extracted_text_bytes || 0))}</p>
+          <p><strong>Cross-config correlation:</strong> ${data.cross_config ? 'ran automatically for this ZIP' : `not run${(archiveSummary.readable_config_count || 0) < 2 ? ' — need at least 2 readable configs' : (archiveSummary.readable_config_count || 0) > 10 ? ' — limited to ZIPs with 2-10 readable configs' : ''}`}</p>
+          ${skippedEntries.length ? `<details style="margin-top:10px;"><summary>Sample skipped entries (${skippedEntries.length})</summary><ul>${skippedEntries.map(entry => `<li>${escapeHtml(entry.filename)} — ${escapeHtml(entry.reason)}</li>`).join('')}</ul></details>` : ''}
+        </div>
+      ` : '';
+      const crossConfig = data.cross_config ? `
+        <div class="finding info">
+          <h4>Cross-config correlation from ZIP batch</h4>
+          <p><strong>Findings:</strong> ${data.cross_config.summary?.total || 0} total · ${data.cross_config.summary?.critical || 0} critical · ${data.cross_config.summary?.warning || 0} warning</p>
+          ${(data.cross_config.inferred_links || []).length ? `<p><strong>Inferred links</strong></p><ul>${data.cross_config.inferred_links.map(link => `<li>${escapeHtml(link.label)} — ${escapeHtml(link.confidence)} confidence${link.network ? ` · ${escapeHtml(link.network)}` : ''}</li>`).join('')}</ul>` : ''}
+        </div>
+      ` : '';
+
+      target.innerHTML = `
+        <div><strong>Batch summary:</strong> ${data.summary.configs_reviewed || 0} configs · ${data.summary.pass_count || 0} pass · ${data.summary.fail_count || 0} fail · ${data.summary.findings_total || 0} findings</div>
+        ${archiveSummaryPanel}
+        <div class="finding ${criticalItems.length ? 'critical' : failingItems.length ? 'warning' : 'info'}" style="margin-top:12px;">
+          <h4>Operator triage queue</h4>
+          <p><strong>${criticalItems.length}</strong> device${criticalItems.length === 1 ? '' : 's'} with critical findings · <strong>${failingItems.length}</strong> failing review${failingItems.length === 1 ? '' : 's'} total.</p>
+          <p>The list below is automatically sorted by risk so the worst devices land at the top first.</p>
+          <p><strong>Current handoff target:</strong> ${escapeHtml(getExportTargetLabelFromPrefs(currentExportPrefs))} · ${escapeHtml(getExportDestinationLabelFromPrefs(currentExportPrefs))}</p>
+          <p><strong>Current target readiness:</strong> ${currentExportReadiness.ready ? 'ready to export' : 'missing required setup'}${currentExportReadiness.missing.length ? ` · ${escapeHtml(currentExportReadiness.missing[0])}` : ''}</p>
+          <p><strong>Reusable last successful handoff:</strong> ${latestSuccessfulExport ? `${escapeHtml(latestSuccessfulExport.target)} · ${escapeHtml(latestSuccessfulExport.destination)} · ${escapeHtml(latestSuccessfulExport.timestamp)}` : 'none yet in this browser session'}</p>
+          ${latestSuccessfulExport ? `<p class="history-meta">${escapeHtml(buildDestinationAlignmentNote(latestSuccessfulExport, currentExportPrefs, { prefix: 'Reusable handoff' }))}</p>` : ''}
+          <p><strong>Handoff state:</strong> ${pendingItems.length} pending · ${orderedReviews.filter(item => batchProgress[item.review.review_id]?.exported).length} exported · ${orderedReviews.filter(item => batchProgress[item.review.review_id]?.done).length} marked done · ${failedExportItems.length} with export issues</p>
+          <div class="row" style="margin-top:12px;">
+            <label>
+              <span class="muted">Queue filter</span>
+              <select id="batchQueueFilter">
+                <option value="attention" ${existingFilter === 'attention' ? 'selected' : ''}>Needs attention</option>
+                <option value="all" ${existingFilter === 'all' ? 'selected' : ''}>All reviews</option>
+                <option value="critical" ${existingFilter === 'critical' ? 'selected' : ''}>Critical findings</option>
+                <option value="failing" ${existingFilter === 'failing' ? 'selected' : ''}>Failing reviews</option>
+                <option value="pending" ${existingFilter === 'pending' ? 'selected' : ''}>Pending handoff</option>
+                <option value="export-issues" ${existingFilter === 'export-issues' ? 'selected' : ''}>Export issues</option>
+                <option value="exported" ${existingFilter === 'exported' ? 'selected' : ''}>Already exported</option>
+                <option value="done" ${existingFilter === 'done' ? 'selected' : ''}>Marked done</option>
+                <option value="pass-only" ${existingFilter === 'pass-only' ? 'selected' : ''}>Pass-only reviews</option>
+              </select>
+            </label>
+            <label>
+              <span class="muted">Search by filename, hostname, vendor, finding, or destination</span>
+              <input id="batchQueueSearch" value="${escapeHtml(existingSearch)}" placeholder="e.g. edge-a, NET-123, branch-r1, ospf" />
+            </label>
+          </div>
+          <p><strong>Visible queue:</strong> ${filteredReviews.length} of ${orderedReviews.length} review${orderedReviews.length === 1 ? '' : 's'} · ${filteredCriticalCount} critical · ${filteredFailingCount} failing · ${filteredPendingCount} pending · ${filteredExportIssueCount} with export issues</p>
+          <p class="history-meta">Queue quick actions below now follow the current filter/search, so “next pending” and similar actions only touch what you can actually see in the visible slice.</p>
+          <div class="finding-toolbar">
+            <button class="secondary-action" id="batchOpenWorstBtn" ${filteredHighestRiskItem ? '' : 'disabled'}>Open highest-risk visible review</button>
+            <button class="secondary-action" id="batchOpenFirstFailBtn" ${filteredFailingItems.length ? '' : 'disabled'}>Open first visible failing review</button>
+            <button class="secondary-action" id="batchOpenFirstCriticalBtn" ${filteredCriticalItems.length ? '' : 'disabled'}>Open first visible critical review</button>
+            <button class="secondary-action" id="batchOpenNextPendingBtn" ${filteredPendingItems.length ? '' : 'disabled'}>Open next visible pending handoff</button>
+            <button class="secondary-action" id="batchExportNextPendingBtn" ${(filteredPendingItems.length && currentExportReadiness.ready) ? '' : 'disabled'}>Export next visible pending to ${escapeHtml(currentExportReadiness.targetLabel)}</button>
+            <button class="secondary-action" id="batchDuplicateNextPendingBtn" ${(filteredPendingItems.length && latestSuccessfulExport) ? '' : 'disabled'}>Duplicate last successful handoff to next visible pending</button>
+            <button class="secondary-action" id="batchRetryFirstFailedExportBtn" ${filteredFailedExportItems.length ? '' : 'disabled'}>Retry first visible failed export</button>
+            <button class="secondary-action" id="batchCopyFirstFailSummaryBtn" ${filteredFailingItems.length ? '' : 'disabled'}>Copy first visible failing summary</button>
+            <button class="secondary-action" id="batchCopyFirstFallbackBtn" ${(filteredFailedExportItems.length || filteredFailingItems.length) ? '' : 'disabled'}>Copy first visible manual fallback</button>
+            <button class="secondary-action" id="batchDownloadFirstFallbackBtn" ${(filteredFailedExportItems.length || filteredFailingItems.length) ? '' : 'disabled'}>Download first visible fallback bundle</button>
+          </div>
+        </div>
+        <div style="margin-top:12px;">${crossConfig}${reviewCards || '<div class="muted">No reviews match the current queue filter/search.</div>'}</div>
+      `;
+
+      target.querySelector('#batchQueueFilter')?.addEventListener('change', () => renderBatchReviewResults(currentBatchReview));
+      target.querySelector('#batchQueueSearch')?.addEventListener('input', () => renderBatchReviewResults(currentBatchReview));
+      renderBatchWorkspaceNavigator();
+
+      target.querySelectorAll('[data-batch-open-review-id]').forEach(button => {
+        button.addEventListener('click', () => {
+          const reviewId = button.dataset.batchOpenReviewId;
+          const item = (currentBatchReview?.reviews || []).find(entry => entry.review.review_id === reviewId);
+          if (!item) return;
+          loadReviewIntoWorkspace(item.review, item.config_text || '');
+        });
+      });
+
+      target.querySelectorAll('[data-batch-export-review-id]').forEach(button => {
+        button.addEventListener('click', () => {
+          const reviewId = button.dataset.batchExportReviewId;
+          const item = (currentBatchReview?.reviews || []).find(entry => entry.review.review_id === reviewId);
+          if (!item) return;
+          downloadJson(`config-review-${item.review.review_id}.json`, item.review.report || item.review);
+        });
+      });
+
+      target.querySelectorAll('[data-batch-itsm-export-review-id]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const reviewId = button.dataset.batchItsmExportReviewId;
+          const item = (currentBatchReview?.reviews || []).find(entry => entry.review.review_id === reviewId);
+          if (!item) return;
+          try {
+            await exportBatchReviewItemToITSM(item, button, { renderPanel: currentReview?.review_id === reviewId });
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      });
+
+      target.querySelectorAll('[data-batch-duplicate-export-review-id]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const reviewId = button.dataset.batchDuplicateExportReviewId;
+          const item = (currentBatchReview?.reviews || []).find(entry => entry.review.review_id === reviewId);
+          const latestReusable = findLatestSuccessfulExportEntry(batchReviewIds);
+          if (!item || !latestReusable?.reusablePrefs) return;
+          try {
+            await exportBatchReviewItemToITSM(item, button, {
+              renderPanel: currentReview?.review_id === reviewId,
+              successMessage: `Duplicated ${latestReusable.target} handoff onto this review.`,
+              exportPrefsOverride: latestReusable.reusablePrefs,
+            });
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      });
+
+      target.querySelectorAll('[data-batch-copy-fallback-review-id]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const reviewId = button.dataset.batchCopyFallbackReviewId;
+          const item = (currentBatchReview?.reviews || []).find(entry => entry.review.review_id === reviewId);
+          if (!item) return;
+          const latestExport = getReviewExportHistory(reviewId)[0] || null;
+          updateBatchProgress(reviewId, { lastAction: 'copied manual fallback package' });
+          await copyTextToClipboard(buildManualFallbackText(item.review, latestExport), 'Manual fallback package copied.');
+          renderBatchReviewResults(currentBatchReview);
+        });
+      });
+
+      target.querySelectorAll('[data-batch-download-fallback-review-id]').forEach(button => {
+        button.addEventListener('click', () => {
+          const reviewId = button.dataset.batchDownloadFallbackReviewId;
+          const item = (currentBatchReview?.reviews || []).find(entry => entry.review.review_id === reviewId);
+          if (!item) return;
+          const latestExport = getReviewExportHistory(reviewId)[0] || null;
+          updateBatchProgress(reviewId, { lastAction: 'downloaded manual fallback bundle' });
+          downloadManualFallbackBundle(item.review, latestExport);
+          renderBatchReviewResults(currentBatchReview);
+        });
+      });
+
+      target.querySelectorAll('[data-batch-copy-summary-review-id]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const reviewId = button.dataset.batchCopySummaryReviewId;
+          const item = (currentBatchReview?.reviews || []).find(entry => entry.review.review_id === reviewId);
+          if (!item) return;
+          updateBatchProgress(reviewId, { lastAction: 'copied handoff summary' });
+          await copyTextToClipboard(buildExportSummaryText(item.review), 'Handoff summary copied.');
+          renderBatchReviewResults(currentBatchReview);
+        });
+      });
+
+      target.querySelectorAll('[data-batch-toggle-done-review-id]').forEach(button => {
+        button.addEventListener('click', () => {
+          const reviewId = button.dataset.batchToggleDoneReviewId;
+          const progress = getBatchProgressState()[reviewId] || {};
+          updateBatchProgress(reviewId, {
+            done: !progress.done,
+            lastAction: !progress.done ? 'marked handoff done' : 'marked handoff pending',
+          });
+          renderBatchReviewResults(currentBatchReview);
+        });
+      });
+
+      document.getElementById('batchOpenWorstBtn')?.addEventListener('click', () => {
+        const item = filteredHighestRiskItem;
+        if (!item) return;
+        loadReviewIntoWorkspace(item.review, item.config_text || '');
+      });
+      document.getElementById('batchOpenFirstFailBtn')?.addEventListener('click', () => {
+        const item = filteredFailingItems[0];
+        if (!item) return;
+        loadReviewIntoWorkspace(item.review, item.config_text || '');
+      });
+      document.getElementById('batchOpenFirstCriticalBtn')?.addEventListener('click', () => {
+        const item = filteredCriticalItems[0];
+        if (!item) return;
+        loadReviewIntoWorkspace(item.review, item.config_text || '');
+      });
+      document.getElementById('batchOpenNextPendingBtn')?.addEventListener('click', () => {
+        const item = filteredPendingItems[0];
+        if (!item) return;
+        loadReviewIntoWorkspace(item.review, item.config_text || '');
+      });
+      document.getElementById('batchCopyFirstFailSummaryBtn')?.addEventListener('click', async () => {
+        const item = filteredFailingItems[0] || filteredCriticalItems[0];
+        if (!item) return;
+        updateBatchProgress(item.review.review_id, { lastAction: 'copied first visible failing summary' });
+        await copyTextToClipboard(buildExportSummaryText(item.review), 'First visible failing handoff summary copied.');
+        renderBatchReviewResults(currentBatchReview);
+      });
+      document.getElementById('batchExportNextPendingBtn')?.addEventListener('click', async () => {
+        const item = filteredPendingItems[0];
+        if (!item) return;
+        const button = document.getElementById('batchExportNextPendingBtn');
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Exporting...';
+        try {
+          await exportBatchReviewItemToITSM(item, null, { renderPanel: currentReview?.review_id === item.review.review_id, successMessage: 'Next visible pending review exported to the current ITSM target.' });
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      });
+      document.getElementById('batchDuplicateNextPendingBtn')?.addEventListener('click', async () => {
+        const item = filteredPendingItems[0];
+        const latestReusable = findLatestSuccessfulExportEntry(batchReviewIds);
+        if (!item || !latestReusable?.reusablePrefs) return;
+        const button = document.getElementById('batchDuplicateNextPendingBtn');
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Duplicating...';
+        try {
+          await exportBatchReviewItemToITSM(item, null, {
+            renderPanel: currentReview?.review_id === item.review.review_id,
+            successMessage: `Duplicated ${latestReusable.target} handoff onto the next visible pending review.`,
+            exportPrefsOverride: latestReusable.reusablePrefs,
+          });
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      });
+      document.getElementById('batchRetryFirstFailedExportBtn')?.addEventListener('click', async () => {
+        const item = filteredFailedExportItems[0];
+        if (!item) return;
+        const button = document.getElementById('batchRetryFirstFailedExportBtn');
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Retrying...';
+        try {
+          await exportBatchReviewItemToITSM(item, null, { renderPanel: currentReview?.review_id === item.review.review_id, successMessage: 'Retried the first visible failed export with the current target details.' });
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      });
+      document.getElementById('batchCopyFirstFallbackBtn')?.addEventListener('click', async () => {
+        const item = filteredFailedExportItems[0] || filteredFailingItems[0] || filteredCriticalItems[0];
+        if (!item) return;
+        const latestExport = getReviewExportHistory(item.review.review_id)[0] || null;
+        updateBatchProgress(item.review.review_id, { lastAction: 'copied first visible manual fallback package' });
+        await copyTextToClipboard(buildManualFallbackText(item.review, latestExport), 'First visible manual fallback package copied.');
+        renderBatchReviewResults(currentBatchReview);
+      });
+      document.getElementById('batchDownloadFirstFallbackBtn')?.addEventListener('click', () => {
+        const item = filteredFailedExportItems[0] || filteredFailingItems[0] || filteredCriticalItems[0];
+        if (!item) return;
+        const latestExport = getReviewExportHistory(item.review.review_id)[0] || null;
+        updateBatchProgress(item.review.review_id, { lastAction: 'downloaded first visible fallback bundle' });
+        downloadManualFallbackBundle(item.review, latestExport);
+        renderBatchReviewResults(currentBatchReview);
+      });
+    }
+
+    async function runBatchReview() {
+      const base = await getEngineBaseUrl();
+      const file = document.getElementById('batchZipFile').files?.[0];
+      if (!file) {
+        alert('Choose a ZIP file first.');
+        return;
+      }
+      const selectedTemplate = getSelectedTemplate();
+      const res = await fetch(`${base}/api/batch-review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ENGINE_API_KEY },
+        body: JSON.stringify({
+          zip_filename: file.name,
+          zip_base64: await fileToBase64(file),
+          vendor: document.getElementById('vendor').value || null,
+          engineer_name: document.getElementById('engineerName').value || null,
+          quick_pass: document.getElementById('quickPass').checked,
+          snippet_mode: document.getElementById('forceSnippet').checked ? true : null,
+          context_hint: document.getElementById('contextHint').value || null,
+          template_id: selectedTemplate?.key || null,
+          template_name: selectedTemplate?.name || null,
+          template_version: selectedTemplate?.version || 'default',
+          template_rules: selectedTemplate?.rules || null,
+        }),
+      });
+
+      if (!res.ok) throw new Error(await buildBatchReviewErrorMessage(res));
+      const data = await res.json();
+      renderBatchReviewResults(data);
+    }
+
+    function getMultiConfigPayload() {
+      return [
+        { config_text: document.getElementById('multiConfigA').value, vendor: document.getElementById('vendor').value || null },
+        { config_text: document.getElementById('multiConfigB').value, vendor: document.getElementById('vendor').value || null },
+      ].filter(item => item.config_text.trim());
+    }
+
+    async function correlateConfigs() {
+      const base = await getEngineBaseUrl();
+      const res = await fetch(`${base}/api/correlate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ENGINE_API_KEY },
+        body: JSON.stringify({
+          configs: getMultiConfigPayload(),
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text() || `Cross-config review failed with ${res.status}`);
+      const data = await res.json();
+      const target = document.getElementById('correlateResults');
+      const links = (data.inferred_links || []).map(link => `<li>${escapeHtml(link.label)} — ${escapeHtml(link.confidence)} confidence${link.network ? ` · ${escapeHtml(link.network)}` : ''}</li>`).join('');
+      const findings = (data.findings || []).map(f => `
+        <div class="finding ${f.severity}">
+          <h4>${escapeHtml(f.title)} <span class="badge ${f.severity}">${escapeHtml(f.severity)}</span></h4>
+          <p>${escapeHtml(f.description)}</p>
+          ${f.config_context ? `<pre>${escapeHtml(f.config_context)}</pre>` : ''}
+        </div>
+      `).join('');
+      target.innerHTML = `
+        <div><strong>Cross-config findings:</strong> ${data.summary?.total || 0} total · ${data.summary?.critical || 0} critical · ${data.summary?.warning || 0} warning</div>
+        ${links ? `<p><strong>Inferred links</strong></p><ul>${links}</ul>` : '<div class="muted" style="margin-top:10px;">No inferred links yet.</div>'}
+        <div style="margin-top:12px;">${findings || '<div class="muted">No cross-config mismatches found.</div>'}</div>
+      `;
+    }
+
+    async function askMultiConfigQuestion() {
+      const configs = getMultiConfigPayload();
+      if (configs.length < 2) {
+        alert('Paste at least two configs first.');
+        return;
+      }
+      const question = document.getElementById('multiQuestionInput').value.trim();
+      if (!question) {
+        alert('Ask a cross-config question first.');
+        return;
+      }
+
+      const base = await getEngineBaseUrl();
+      const res = await fetch(`${base}/api/query/multi`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ENGINE_API_KEY },
+        body: JSON.stringify({ configs, question }),
+      });
+
+      if (!res.ok) throw new Error(await res.text() || `Cross-config query failed with ${res.status}`);
+      const data = await res.json();
+      rememberMultiQuery({
+        question,
+        timestamp: new Date().toLocaleString(),
+        matchSummary: (data.matches || []).length ? `${data.matches.length} matching device${data.matches.length === 1 ? '' : 's'}` : 'No matching devices',
+        scopeLabel: `${configs.length} config${configs.length === 1 ? '' : 's'}`,
+        answer: data.answer,
+      });
+      const panel = document.getElementById('multiQueryAnswer');
+      panel.style.display = 'block';
+      panel.innerHTML = `
+        <h4>Cross-config answer</h4>
+        <p>${escapeHtml(data.answer).replaceAll('\n', '<br>')}</p>
+        ${(data.matches || []).length ? `
+          <p><strong>Matching devices</strong></p>
+          <div class="history-list">
+            ${data.matches.map(match => `
+              <div class="history-item">
+                <div><strong>${escapeHtml(match.hostname)}</strong> · ${escapeHtml(match.vendor)}</div>
+                <div class="history-meta">Lines ${escapeHtml((match.line_references || []).join(', ')) || 'none'}</div>
+                ${(match.preview || []).length ? `<pre>${escapeHtml(match.preview.join('\n'))}</pre>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : '<p class="muted">No matching devices were found.</p>'}
+      `;
+    }
+
+    async function compareConfigs() {
+      const base = await getEngineBaseUrl();
+      const res = await fetch(`${base}/api/compare`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ENGINE_API_KEY },
+        body: JSON.stringify({
+          running_config: document.getElementById('runningConfig').value,
+          startup_config: document.getElementById('startupConfig').value,
+          vendor: document.getElementById('vendor').value || null,
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text() || `Compare failed with ${res.status}`);
+      const data = await res.json();
+      const target = document.getElementById('compareResults');
+      target.innerHTML = `
+        <div><strong>Lost on reload findings:</strong> ${(data.lost_on_reload || []).length}</div>
+        ${(data.lost_on_reload || []).map(f => `
+          <div class="finding critical">
+            <h4>${escapeHtml(f.title)}</h4>
+            <p>${escapeHtml(f.description)}</p>
+            <pre>${escapeHtml(f.remediation || '')}</pre>
+          </div>
+        `).join('') || '<div class="muted" style="margin-top:10px;">No lost-on-reload findings.</div>'}
+      `;
+    }
+
+    async function handleFileUpload(event) {
+      const file = event.target.files?.[0];
+      if (!file) {
+        renderSingleConfigFileState(null);
+        return;
+      }
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+      const intakeState = analyzeSingleConfigFile(file, text, bytes);
+      renderSingleConfigFileState({ ...intakeState, file });
+      if (!intakeState.canLoad) return;
+      document.getElementById('configText').value = text;
+    }
+
+    async function exportCurrentPdf() {
+      const configText = document.getElementById('configText').value;
+      if (!configText.trim()) {
+        alert('Paste a config first.');
+        return;
+      }
+      const base = await getEngineBaseUrl();
+      const payload = {
+        config_text: configText,
+        vendor: document.getElementById('vendor').value || null,
+        quick_pass: document.getElementById('quickPass').checked,
+        snippet_mode: document.getElementById('forceSnippet').checked ? true : null,
+        context_hint: document.getElementById('contextHint').value || null,
+        engineer_name: document.getElementById('engineerName').value || null,
+        template_id: getSelectedTemplate()?.key || null,
+        template_name: getSelectedTemplate()?.name || null,
+        template_version: getSelectedTemplate()?.version || 'default',
+        template_rules: getSelectedTemplate()?.rules || null,
+      };
+      const res = await fetch(`${base}/api/report/render?format=pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ENGINE_API_KEY },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text() || `PDF export failed with ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `config-review-${currentReview?.review_id || 'latest'}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportCurrentReview() {
+      if (!currentReview) {
+        alert('Run an analysis first.');
+        return;
+      }
+      downloadJson(`config-review-${currentReview.review_id}.json`, currentReview.report || currentReview);
+    }
+
+    document.getElementById('templateAddRuleBtn').addEventListener('click', () => {
+      try {
+        templateDraftRules.push(buildGuidedRuleFromForm());
+        renderTemplateDraft();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+    document.getElementById('templateSaveVersionBtn').addEventListener('click', () => {
+      const templateName = document.getElementById('templateNameInput').value.trim();
+      if (!templateName) {
+        alert('Name the template before saving a version.');
+        return;
+      }
+      if (!templateDraftRules.length) {
+        alert('Add at least one rule before saving a version.');
+        return;
+      }
+      let template = customTemplates.find(item => item.name.toLowerCase() === templateName.toLowerCase());
+      if (!template) {
+        template = { name: templateName, versions: [] };
+        customTemplates.push(template);
+      }
+      const versionNumber = template.versions.length + 1;
+      template.versions.push({
+        version: `v${versionNumber}`,
+        createdAt: new Date().toLocaleString(),
+        rules: JSON.parse(JSON.stringify(templateDraftRules)),
+      });
+      persistCustomTemplates();
+      renderTemplateVersions();
+      document.getElementById('starterTemplate').value = `custom:${customTemplates.indexOf(template)}:${template.versions.length - 1}`;
+    });
+    document.getElementById('templateLoadStarterBtn').addEventListener('click', () => {
+      const selectedTemplate = getSelectedTemplate();
+      if (!selectedTemplate?.rules?.length) {
+        alert('Select a starter or saved template first.');
+        return;
+      }
+      document.getElementById('templateNameInput').value = `${selectedTemplate.name} custom`;
+      templateDraftRules = JSON.parse(JSON.stringify(selectedTemplate.rules));
+      renderTemplateDraft();
+    });
+    document.getElementById('templateClearDraftBtn').addEventListener('click', () => {
+      templateDraftRules = [];
+      renderTemplateDraft();
+    });
+    document.getElementById('analyzeBtn').addEventListener('click', async () => { try { await analyzeConfig(); } catch (err) { alert(err.message); } });
+    document.getElementById('askBtn').addEventListener('click', async () => { try { await askQuestion(); } catch (err) { alert(err.message); } });
+    document.getElementById('correlateBtn').addEventListener('click', async () => { try { await correlateConfigs(); } catch (err) { alert(err.message); } });
+    document.getElementById('askMultiBtn').addEventListener('click', async () => { try { await askMultiConfigQuestion(); } catch (err) { alert(err.message); } });
+    document.getElementById('compareBtn').addEventListener('click', async () => { try { await compareConfigs(); } catch (err) { alert(err.message); } });
+    document.getElementById('configFile').addEventListener('change', handleFileUpload);
+    document.getElementById('batchReviewBtn').addEventListener('click', async () => { try { await runBatchReview(); } catch (err) { alert(err.message); } });
+    document.getElementById('exportJsonBtn').addEventListener('click', exportCurrentReview);
+    document.getElementById('exportPdfBtn').addEventListener('click', async () => { try { await exportCurrentPdf(); } catch (err) { alert(err.message); } });
+    document.getElementById('severityFilter').addEventListener('change', () => {
+      saveSessionValue(SESSION_STORAGE_KEYS.severityFilter, document.getElementById('severityFilter').value);
+      if (currentReview) renderFindings(currentReview.findings);
+    });
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      document.getElementById('configText').value = '';
+      clearSingleConfigFileState();
+      document.getElementById('findingsList').innerHTML = '<div class="muted">Run an analysis to see findings.</div>';
+      document.getElementById('summaryState').textContent = 'No review yet.';
+      document.getElementById('stats').style.display = 'none';
+      document.getElementById('snippetInfo').innerHTML = '';
+      document.getElementById('reportHeaderPanel').innerHTML = '';
+      document.getElementById('quickPassPanel').innerHTML = '';
+      document.getElementById('templateCompliancePanel').innerHTML = '';
+      document.getElementById('changeScriptPanel').innerHTML = '';
+      document.getElementById('worklistPanel').innerHTML = '';
+      document.getElementById('exportPanel').innerHTML = '';
+      document.getElementById('batchWorkspaceNavigator').innerHTML = '';
+      document.getElementById('queryPanel').style.display = 'none';
+      document.getElementById('queryAnswer').style.display = 'none';
+      document.getElementById('configNavigator').innerHTML = '';
+      document.getElementById('batchReviewResults').textContent = 'No batch review yet.';
+      document.getElementById('navigatorState').textContent = 'Run an analysis to load a line-numbered config view.';
+      currentFocusRange = null;
+      currentReview = null;
+      currentBatchReview = null;
+      currentWorklistState = {};
+    });
+    loadStarterTemplates();
+    restoreSessionPreferences();
+
+    document.getElementById('loadSampleBtn').addEventListener('click', () => {
+      clearSingleConfigFileState();
+      const sample = `hostname BRANCH-R1
+service timestamps debug datetime msec
+version 15.7
+!
+enable password weakpass
+ip http server
+snmp-server community public RO
+!
+interface GigabitEthernet0/0
+ description WAN-UPLINK
+ ip address 203.0.113.10 255.255.255.252
+!
+interface GigabitEthernet0/1
+ description USER-LAN
+ ip address 10.10.10.1 255.255.255.0
+!
+ip access-list extended UNUSED-ACL
+ deny ip any any
+!
+line vty 0 4
+ transport input telnet
+!`;
+      document.getElementById('configText').value = sample;
+      document.getElementById('runningConfig').value = sample + '\ninterface Loopback0\n ip address 1.1.1.1 255.255.255.255';
+      document.getElementById('startupConfig').value = sample;
+      document.getElementById('multiConfigA').value = `hostname EDGE-A\ninterface GigabitEthernet0/0\n description TO-EDGE-B\n ip address 10.0.0.1 255.255.255.252\n mtu 1500\n!\nrouter ospf 1\n network 10.0.0.0 0.0.0.3 area 0\n!\nrouter bgp 65001\n neighbor 10.0.0.2 remote-as 65002\n!`;
+      document.getElementById('multiConfigB').value = `hostname EDGE-B\ninterface GigabitEthernet0/0\n description TO-EDGE-A\n ip address 10.0.0.2 255.255.255.252\n mtu 9216\n!\nrouter ospf 1\n network 10.0.0.0 0.0.0.3 area 1\n!\nrouter bgp 65002\n neighbor 192.0.2.1 remote-as 65001\n!`;
+    });
+  </script>
+</body>
+</html>
