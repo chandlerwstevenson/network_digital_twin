@@ -224,8 +224,48 @@ def test_batch_review_rejects_config_larger_than_2mb():
     assert "2 MB per-file batch review limit" in response.json()["detail"]
 
 
-def test_batch_review_rejects_zip_with_too_many_members():
-    files = {f"configs/device-{idx}.cfg": "hostname r1\n" for idx in range(251)}
+def test_batch_review_allows_sidecar_heavy_zip_when_readable_config_count_is_small():
+    files = {
+        **{f"notes/readme-{idx}.md": "deployment checklist" for idx in range(260)},
+        "configs/router1.cfg": "hostname r1\nip http server\n",
+        "configs/router2.cfg": "hostname r2\nline vty 0 4\n transport input telnet\n",
+    }
+    response = client.post(
+        "/api/batch-review",
+        headers=HEADERS,
+        json={
+            "zip_filename": "sidecar-heavy.zip",
+            "zip_base64": make_zip_base64(files),
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["review_count"] == 2
+    assert body["archive_summary"]["archive_member_count"] == 262
+    assert body["archive_summary"]["readable_config_count"] == 2
+    assert body["archive_summary"]["skipped_non_config_count"] == 260
+
+
+
+def test_batch_review_rejects_zip_with_more_than_50_readable_configs():
+    files = {f"configs/device-{idx}.cfg": f"hostname r{idx}\n" for idx in range(51)}
+    response = client.post(
+        "/api/batch-review",
+        headers=HEADERS,
+        json={
+            "zip_filename": "too-many-configs.zip",
+            "zip_base64": make_zip_base64(files),
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Batch review supports up to 50 readable config files per ZIP upload."
+
+
+
+def test_batch_review_rejects_zip_with_too_many_total_members():
+    files = {f"notes/readme-{idx}.md": "deployment checklist" for idx in range(1001)}
     response = client.post(
         "/api/batch-review",
         headers=HEADERS,
@@ -236,7 +276,7 @@ def test_batch_review_rejects_zip_with_too_many_members():
     )
 
     assert response.status_code == 400
-    assert "too many entries" in response.json()["detail"]
+    assert response.json()["detail"] == "ZIP archive contains too many total entries. Limit is 1000 files per upload."
 
 
 def test_batch_review_rejects_zip_payload_over_raw_upload_limit():
@@ -417,6 +457,7 @@ def test_export_review_to_jira_attaches_artifacts_and_posts_comment():
     assert body["destination"]["issue_key"] == "NET-123"
     assert len(body["attachments"]) == 2
     assert body["comment"]["attempted"] is True
+    assert body["comment_components"][0]["component"] == "jira_comment"
     assert upload.call_count == 2
     post_json.assert_called_once()
 
@@ -457,6 +498,7 @@ def test_export_review_to_servicenow_attaches_artifacts_and_updates_record():
     assert body["destination"]["record_sys_id"] == "abcd1234"
     assert len(body["attachments"]) == 1
     assert body["comment"]["attempted"] is True
+    assert body["comment_components"][0]["component"] == "work_notes"
     upload.assert_called_once()
     patch_json.assert_called_once()
 
@@ -712,6 +754,123 @@ def test_export_review_surfaces_failed_webhook_delivery():
     assert body["delivery"]["status_code"] == 503
     assert body["delivery"]["detail"] == "upstream unavailable"
     send_webhook.assert_called_once()
+
+
+def test_export_review_surfaces_partial_servicenow_record_updates():
+    with patch("app.api.routes._http_request_multipart", return_value={
+        "attempted": True,
+        "delivered": True,
+        "status_code": 201,
+        "detail": "uploaded",
+    }) as upload, patch("app.api.routes._http_request_json", side_effect=[
+        {
+            "attempted": True,
+            "delivered": True,
+            "status_code": 200,
+            "detail": "updated work notes",
+        },
+        {
+            "attempted": True,
+            "delivered": False,
+            "status_code": 403,
+            "detail": "field write denied",
+        },
+    ]) as patch_json:
+        response = client.post(
+            "/api/export/review",
+            headers=HEADERS,
+            json={
+                "config_text": "hostname r1\nip http server",
+                "target": "servicenow",
+                "auth": {"auth_type": "basic", "username": "api-user", "password": "api-pass"},
+                "service_now": {
+                    "instance_url": "https://example.service-now.com",
+                    "table_name": "change_request",
+                    "record_sys_id": "abcd1234",
+                    "update_work_notes": True,
+                    "update_short_description": True
+                },
+                "include_pdf": True,
+                "include_json": False,
+                "include_html": False,
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]["export_status"] == "partial_failure"
+    assert body["summary"]["has_failures"] is True
+    assert body["summary"]["attachments_attempted"] == 1
+    assert body["summary"]["attachments_delivered"] == 1
+    assert body["summary"]["comment_attempted"] is True
+    assert body["summary"]["comment_delivered"] is False
+    assert body["summary"]["comment_components_attempted"] == 2
+    assert body["summary"]["comment_components_delivered"] == 1
+    assert body["summary"]["comment_components_failed"] == 1
+    assert body["comment"]["detail"] == "Failed ServiceNow record updates: short_description"
+    assert body["failed_components"] == ["servicenow:short_description"]
+    components = {component["component"]: component for component in body["comment_components"]}
+    assert components["work_notes"]["delivered"] is True
+    assert components["short_description"]["delivered"] is False
+    assert components["short_description"]["status_code"] == 403
+    upload.assert_called_once()
+    assert patch_json.call_count == 2
+
+
+def test_export_review_surfaces_partial_servicenow_attachment_failures():
+    with patch("app.api.routes._http_request_multipart", side_effect=[
+        {
+            "attempted": True,
+            "delivered": False,
+            "status_code": 502,
+            "detail": "attachment gateway failure",
+        },
+        {
+            "attempted": True,
+            "delivered": True,
+            "status_code": 201,
+            "detail": "uploaded pdf",
+        },
+    ]) as upload, patch("app.api.routes._http_request_json", return_value={
+        "attempted": True,
+        "delivered": True,
+        "status_code": 200,
+        "detail": "updated work notes",
+    }) as patch_json:
+        response = client.post(
+            "/api/export/review",
+            headers=HEADERS,
+            json={
+                "config_text": "hostname r1\nip http server",
+                "target": "servicenow",
+                "auth": {"auth_type": "basic", "username": "api-user", "password": "api-pass"},
+                "service_now": {
+                    "instance_url": "https://example.service-now.com",
+                    "table_name": "change_request",
+                    "record_sys_id": "abcd1234",
+                    "update_work_notes": True,
+                    "update_short_description": False
+                },
+                "include_pdf": True,
+                "include_json": True,
+                "include_html": False,
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]["export_status"] == "partial_failure"
+    assert body["summary"]["has_failures"] is True
+    assert body["summary"]["attachments_attempted"] == 2
+    assert body["summary"]["attachments_delivered"] == 1
+    assert body["summary"]["attachments_failed"] == 1
+    assert body["summary"]["comment_attempted"] is True
+    assert body["summary"]["comment_delivered"] is True
+    assert not body["attachments"][0]["delivered"]
+    assert body["attachments"][0]["detail"] == "attachment gateway failure"
+    assert body["failed_components"] == [f"attachment:{body['attachments'][0]['filename']}"]
+    upload.assert_called()
+    patch_json.assert_called_once()
 
 
 def test_export_review_to_jira_requires_auth():

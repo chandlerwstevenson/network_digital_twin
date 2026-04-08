@@ -5,4 +5,7 @@ load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ENGINE_API_KEY = os.getenv("ENGINE_API_KEY", "dev-engine-key")
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,app://renderer").split(",")
+CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000,app://renderer"
+).split(",")

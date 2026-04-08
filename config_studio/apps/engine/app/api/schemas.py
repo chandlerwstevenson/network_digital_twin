@@ -414,6 +414,8 @@ class ReviewExportResponse(BaseModel):
     destination: dict[str, str] = Field(default_factory=dict)
     attachments: list[dict[str, str | int]] = Field(default_factory=list)
     comment: dict[str, str | bool | int | None] = Field(default_factory=dict)
+    comment_components: list[dict[str, str | bool | int | None]] = Field(default_factory=list)
+    failed_components: list[str] = Field(default_factory=list)
     delivery: dict[str, str | bool | int | None] = Field(default_factory=dict)
     summary: dict[str, str | int | bool] = Field(default_factory=dict)
     review: AnalyzeResponse

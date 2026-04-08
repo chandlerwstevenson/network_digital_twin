@@ -72,7 +72,8 @@ ALLOWED_BATCH_EXTENSIONS = {".txt", ".conf", ".cfg", ".log", ".config", ".cnf", 
 MAX_BATCH_CONFIG_BYTES = 2 * 1024 * 1024
 MAX_BATCH_TOTAL_CONFIG_BYTES = 50 * MAX_BATCH_CONFIG_BYTES
 MAX_BATCH_ARCHIVE_BYTES = 25 * 1024 * 1024
-MAX_BATCH_ARCHIVE_MEMBERS = 250
+MAX_BATCH_ARCHIVE_SCAN_MEMBERS = 1000
+MAX_BATCH_REVIEW_CONFIGS = 50
 SEVERITY_RANK = {"info": 1, "warning": 2, "critical": 3}
 
 
@@ -247,10 +248,10 @@ def _extract_batch_zip(req: BatchReviewRequest) -> tuple[list[tuple[str, str]], 
         raise HTTPException(status_code=400, detail="Uploaded file is not a valid ZIP archive.") from exc
 
     members = archive.infolist()
-    if len(members) > MAX_BATCH_ARCHIVE_MEMBERS:
+    if len(members) > MAX_BATCH_ARCHIVE_SCAN_MEMBERS:
         raise HTTPException(
             status_code=400,
-            detail=f"ZIP archive contains too many entries. Limit is {MAX_BATCH_ARCHIVE_MEMBERS} files per upload.",
+            detail=f"ZIP archive contains too many total entries. Limit is {MAX_BATCH_ARCHIVE_SCAN_MEMBERS} files per upload.",
         )
 
     skipped_entries: list[BatchArchiveSkippedEntry] = []
@@ -316,11 +317,14 @@ def _extract_batch_zip(req: BatchReviewRequest) -> tuple[list[tuple[str, str]], 
             )
 
         extracted.append((info.filename, text))
+        if len(extracted) > MAX_BATCH_REVIEW_CONFIGS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Batch review supports up to {MAX_BATCH_REVIEW_CONFIGS} readable config files per ZIP upload.",
+            )
 
     if not extracted:
         raise HTTPException(status_code=400, detail="ZIP archive did not contain any readable config files.")
-    if len(extracted) > 50:
-        raise HTTPException(status_code=400, detail="Batch review supports up to 50 config files per ZIP upload.")
 
     archive_summary = BatchArchiveSummary(
         zip_filename=req.zip_filename,
@@ -559,6 +563,7 @@ def _count_delivered_attachments(attachments: list[dict[str, str | int | bool | 
 def _derive_export_status(
     attachments: list[dict[str, str | int | bool | None]],
     comment_result: dict[str, str | bool | int | None],
+    comment_components: list[dict[str, str | bool | int | None]],
     delivery_result: dict[str, str | bool | int | None],
 ) -> tuple[str, bool]:
     attempted_components: list[bool] = []
@@ -568,7 +573,12 @@ def _derive_export_status(
         attempted_components.append(True)
         delivered_components.append(bool(attachment.get("delivered")))
 
-    if comment_result.get("attempted"):
+    for component in comment_components:
+        if component.get("attempted"):
+            attempted_components.append(True)
+            delivered_components.append(bool(component.get("delivered")))
+
+    if not comment_components and comment_result.get("attempted"):
         attempted_components.append(True)
         delivered_components.append(bool(comment_result.get("delivered")))
 
@@ -586,6 +596,28 @@ def _derive_export_status(
         return "partial_failure", True
 
     return "failed", True
+
+
+def _collect_failed_export_components(
+    target: str,
+    attachments: list[dict[str, str | int | bool | None]],
+    comment_components: list[dict[str, str | bool | int | None]],
+    delivery_result: dict[str, str | bool | int | None],
+) -> list[str]:
+    failed: list[str] = []
+
+    for attachment in attachments:
+        if attachment.get("attempted") and not attachment.get("delivered"):
+            failed.append(f"attachment:{attachment.get('filename', 'unknown')}")
+
+    for component in comment_components:
+        if component.get("attempted") and not component.get("delivered"):
+            failed.append(f"{target}:{component.get('component', 'unknown')}")
+
+    if delivery_result.get("attempted") and not delivery_result.get("delivered"):
+        failed.append(f"{target}:delivery")
+
+    return failed
 
 
 def _validate_export_request(req: ReviewExportRequest) -> None:
@@ -628,7 +660,7 @@ def _build_export_summary_text(review, export_comment: str | None = None) -> str
     return "\n".join(lines)
 
 
-def _export_review_to_servicenow(req: ReviewExportRequest, review) -> tuple[list[dict[str, str | int]], dict[str, str | bool | int | None], dict[str, str]]:
+def _export_review_to_servicenow(req: ReviewExportRequest, review) -> tuple[list[dict[str, str | int]], dict[str, str | bool | int | None], list[dict[str, str | bool | int | None]], dict[str, str]]:
     if not req.service_now:
         raise HTTPException(status_code=400, detail="service_now options are required for ServiceNow export.")
     if not req.auth:
@@ -666,21 +698,62 @@ def _export_review_to_servicenow(req: ReviewExportRequest, review) -> tuple[list
             }
         )
 
-    comment_result = {"attempted": False, "delivered": False, "status_code": None, "detail": None}
-    if req.service_now.update_work_notes or req.service_now.update_short_description:
-        payload: dict[str, str] = {}
-        if req.service_now.update_work_notes:
-            payload["work_notes"] = _build_export_summary_text(review, req.export_comment)
-        if req.service_now.update_short_description:
-            payload["short_description"] = f"Config Studio {review.report.body.executive_summary.pass_fail_label}: {review.report.header.hostname or 'Unknown device'}"
-        comment_result = _http_request_json(
-            f"{instance}/api/now/table/{req.service_now.table_name}/{req.service_now.record_sys_id}",
+    comment_components: list[dict[str, str | bool | int | None]] = []
+    record_url = f"{instance}/api/now/table/{req.service_now.table_name}/{req.service_now.record_sys_id}"
+    if req.service_now.update_work_notes:
+        result = _http_request_json(
+            record_url,
             "PATCH",
-            payload,
+            {"work_notes": _build_export_summary_text(review, req.export_comment)},
             headers,
         )
+        comment_components.append(
+            {
+                "component": "work_notes",
+                "attempted": bool(result.get("attempted")),
+                "delivered": bool(result.get("delivered")),
+                "status_code": int(result.get("status_code") or 0) if result.get("status_code") is not None else None,
+                "detail": str(result.get("detail") or ""),
+            }
+        )
+    if req.service_now.update_short_description:
+        result = _http_request_json(
+            record_url,
+            "PATCH",
+            {"short_description": f"Config Studio {review.report.body.executive_summary.pass_fail_label}: {review.report.header.hostname or 'Unknown device'}"},
+            headers,
+        )
+        comment_components.append(
+            {
+                "component": "short_description",
+                "attempted": bool(result.get("attempted")),
+                "delivered": bool(result.get("delivered")),
+                "status_code": int(result.get("status_code") or 0) if result.get("status_code") is not None else None,
+                "detail": str(result.get("detail") or ""),
+            }
+        )
 
-    return attachment_results, comment_result, {
+    comment_attempted = any(component.get("attempted") for component in comment_components)
+    comment_delivered = bool(comment_components) and all(component.get("delivered") for component in comment_components)
+    failed_components = [component.get("component") for component in comment_components if component.get("attempted") and not component.get("delivered")]
+    if not comment_components:
+        comment_result = {"attempted": False, "delivered": False, "status_code": None, "detail": None}
+    else:
+        status_codes = [component.get("status_code") for component in comment_components if component.get("status_code") is not None]
+        if failed_components:
+            detail = f"Failed ServiceNow record updates: {', '.join(str(name) for name in failed_components)}"
+        elif len(comment_components) == 1:
+            detail = f"Updated ServiceNow {comment_components[0].get('component')}."
+        else:
+            detail = "Updated ServiceNow work_notes and short_description."
+        comment_result = {
+            "attempted": comment_attempted,
+            "delivered": comment_delivered,
+            "status_code": max(status_codes) if status_codes else None,
+            "detail": detail,
+        }
+
+    return attachment_results, comment_result, comment_components, {
         "platform": "ServiceNow",
         "instance_url": instance,
         "table_name": req.service_now.table_name,
@@ -688,7 +761,7 @@ def _export_review_to_servicenow(req: ReviewExportRequest, review) -> tuple[list
     }
 
 
-def _export_review_to_jira(req: ReviewExportRequest, review) -> tuple[list[dict[str, str | int]], dict[str, str | bool | int | None], dict[str, str]]:
+def _export_review_to_jira(req: ReviewExportRequest, review) -> tuple[list[dict[str, str | int]], dict[str, str | bool | int | None], list[dict[str, str | bool | int | None]], dict[str, str]]:
     if not req.jira:
         raise HTTPException(status_code=400, detail="jira options are required for Jira export.")
     if not req.auth:
@@ -723,6 +796,7 @@ def _export_review_to_jira(req: ReviewExportRequest, review) -> tuple[list[dict[
         )
 
     comment_result = {"attempted": False, "delivered": False, "status_code": None, "detail": None}
+    comment_components: list[dict[str, str | bool | int | None]] = []
     if req.jira.add_comment:
         comment_result = _http_request_json(
             f"{base_url}/rest/api/3/issue/{req.jira.issue_key}/comment",
@@ -741,8 +815,17 @@ def _export_review_to_jira(req: ReviewExportRequest, review) -> tuple[list[dict[
             },
             auth_headers,
         )
+        comment_components.append(
+            {
+                "component": "jira_comment",
+                "attempted": bool(comment_result.get("attempted")),
+                "delivered": bool(comment_result.get("delivered")),
+                "status_code": int(comment_result.get("status_code") or 0) if comment_result.get("status_code") is not None else None,
+                "detail": str(comment_result.get("detail") or ""),
+            }
+        )
 
-    return attachment_results, comment_result, {
+    return attachment_results, comment_result, comment_components, {
         "platform": "Jira Cloud",
         "base_url": base_url,
         "issue_key": req.jira.issue_key,
@@ -1083,16 +1166,20 @@ async def export_review(req: ReviewExportRequest, _=Depends(_verify_key)):
     )
 
     delivery_result = {"attempted": False, "delivered": False, "status_code": None, "detail": None}
+    comment_components: list[dict[str, str | bool | int | None]] = []
     if req.target.value == "servicenow":
-        attachments, comment_result, destination = _export_review_to_servicenow(req, review)
+        attachments, comment_result, comment_components, destination = _export_review_to_servicenow(req, review)
     elif req.target.value == "jira":
-        attachments, comment_result, destination = _export_review_to_jira(req, review)
+        attachments, comment_result, comment_components, destination = _export_review_to_jira(req, review)
     else:
         attachments, delivery_result, destination = _export_review_to_webhook(req, review)
         comment_result = {"attempted": False, "delivered": False, "status_code": None, "detail": None}
 
     delivered_attachments = _count_delivered_attachments(attachments)
-    export_status, has_failures = _derive_export_status(attachments, comment_result, delivery_result)
+    attempted_comment_components = [component for component in comment_components if component.get("attempted")]
+    delivered_comment_components = [component for component in attempted_comment_components if component.get("delivered")]
+    export_status, has_failures = _derive_export_status(attachments, comment_result, comment_components, delivery_result)
+    failed_components = _collect_failed_export_components(req.target.value, attachments, comment_components, delivery_result)
 
     return ReviewExportResponse(
         target=req.target,
@@ -1100,6 +1187,8 @@ async def export_review(req: ReviewExportRequest, _=Depends(_verify_key)):
         destination=destination,
         attachments=attachments,
         comment=comment_result,
+        comment_components=comment_components,
+        failed_components=failed_components,
         delivery=delivery_result,
         summary={
             "hostname": review.report.header.hostname or "unknown",
@@ -1113,6 +1202,9 @@ async def export_review(req: ReviewExportRequest, _=Depends(_verify_key)):
             "attachments_failed": len(attachments) - delivered_attachments,
             "comment_attempted": bool(comment_result.get("attempted")),
             "comment_delivered": bool(comment_result.get("delivered")),
+            "comment_components_attempted": len(attempted_comment_components),
+            "comment_components_delivered": len(delivered_comment_components),
+            "comment_components_failed": len(attempted_comment_components) - len(delivered_comment_components),
             "delivery_attempted": bool(delivery_result.get("attempted")),
             "delivery_delivered": bool(delivery_result.get("delivered")),
         },

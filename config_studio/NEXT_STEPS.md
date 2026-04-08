@@ -31,10 +31,11 @@ Status update (2026-04-07):
 - `/api/pipeline/review` now validates `webhook_url` as a real http(s) destination before attempting delivery and sends a more structured webhook payload (`event`, `gate`, `summary`, `blocking_findings`, optional `review`) so CI consumers can parse it without guessing field semantics
 - runtime smoke coverage now explicitly asserts pipeline webhook payload shape, threshold gating via `max_blocking_findings`, invalid pipeline webhook URL rejection, and ServiceNow export negative paths for malformed auth / invalid instance URL
 - `/api/batch-review` now returns explicit ZIP intake metadata (`archive_summary`) so the web UI can show how many archive members were actually reviewed versus skipped, how much config text was ingested, and sample skipped filenames/reasons when sidecar docs, empty files, or other junk were ignored
+- `/api/batch-review` no longer rejects sidecar-heavy ZIPs just because the raw archive member count is high; it now tolerates up to 1000 total entries while enforcing the real product limit of 50 readable configs per upload, which closes the earlier blunt edge where README/checklist-heavy bundles could be rejected before filtering
 
 Next target:
-- expand negative-path coverage around ServiceNow-specific partial delivery and attachment/comment failure reporting
-- after that, return to findings-quality depth (especially line attribution / false-positive reduction / stronger JunOS coverage)
+- either explicitly justify/test the unrelated `http://127.0.0.1:3000` CORS widening in engine config or revert it so this backend slice stays requirement-focused
+- then return to findings-quality depth (especially line attribution / false-positive reduction / stronger JunOS coverage)
 
 ### 2. ITSM UX in the web app
 Requirements:
@@ -55,6 +56,9 @@ Status update (2026-04-07):
 
 Next target:
 - stale-vs-current duplicated-handoff labeling is now implemented directly on the batch queue and per-review cards, so operators can see when a reusable destination no longer matches the export panel target
+- batch triage queue now also has operator-focused filter/search controls so medium-size ZIP reviews can be narrowed to needs-attention / critical / failing / pending / export-issue subsets and searched by filename, hostname, vendor, finding title, or destination during a live change window
+- queue-level batch quick actions now respect the visible filtered/search slice instead of acting on hidden reviews elsewhere in the queue, which removes a real change-window footgun when an engineer narrows to a subset and expects “next pending” / “retry first failed” to stay inside that slice
+- the analysis workspace now includes a batch queue navigator when a review is opened from a ZIP batch, so the engineer can move previous/next within the current visible slice and use a one-click `mark done + open next pending` flow without bouncing back down to the batch panel after every device
 - return to backend validation depth for ServiceNow partial-failure coverage and export/reporting depth
 - after that, consider whether the batch queue should expose more pre-review ZIP linting before upload (for example, warn locally on obviously empty sidecar-heavy archives)
 
