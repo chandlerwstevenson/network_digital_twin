@@ -5,7 +5,7 @@ Config Studio is a network configuration review product prototype.
 Current repo contents:
 - `apps/engine` — FastAPI analysis engine for config review
 - `apps/desktop` — Electron shell that embeds the engine and a static renderer
-- `apps/web` — working static frontend for review, query, batch review, template authoring, compare, and operator workflows
+- `apps/web` — working static frontend for review, query, batch review, template authoring, compare, operator workflows, and one-click ITSM export handoff
 - `packages/shared` — shared TypeScript domain types
 - `supabase/` — schema and backend data model draft
 - `examples/` — CI/CD and ITSM integration examples for GitHub Actions, GitLab CI, Jenkins, Jira Cloud, ServiceNow, generic webhooks, and a local shell gate
@@ -14,7 +14,7 @@ Current repo contents:
 
 This repository is now a **working end-to-end prototype**, not just an engine stub.
 
-The current implementation covers the day-one web flow plus a pipeline-oriented REST gate for pre-merge / pre-deploy review and direct export hooks for Jira Cloud, ServiceNow change records, and generic ITSM webhooks. See `REQUIREMENT.txt` for product targets and `NEXT_STEPS.md` for the current structured work loop.
+The current implementation covers the day-one web flow plus a pipeline-oriented REST gate for pre-merge / pre-deploy review and direct export hooks for Jira Cloud, ServiceNow change records, and generic ITSM webhooks. The web app now also exposes those export targets directly so an engineer can hand a review off from the operator UI without dropping into curl, including batch-queue actions to reuse the current handoff target across multiple devices, duplicate the last successful ticket/change-record handoff onto another queued review, copy a manual fallback package when the remote ITSM system is degraded, download a fuller fallback bundle (`.json` + `.txt`) for manual attachment during an active change window, and inspect a ZIP intake summary that shows which archive entries were actually reviewed versus skipped. See `REQUIREMENT.txt` for product targets and `NEXT_STEPS.md` for the current structured work loop.
 
 ## Engine development
 

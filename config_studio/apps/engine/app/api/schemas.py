@@ -321,6 +321,23 @@ class CrossConfigResponse(BaseModel):
     summary: dict[str, int] = Field(default_factory=dict)
 
 
+class BatchArchiveSkippedEntry(BaseModel):
+    filename: str
+    reason: str
+
+
+class BatchArchiveSummary(BaseModel):
+    zip_filename: str | None = None
+    archive_member_count: int = 0
+    readable_config_count: int = 0
+    skipped_directory_count: int = 0
+    skipped_non_config_count: int = 0
+    skipped_empty_count: int = 0
+    skipped_undecodable_count: int = 0
+    extracted_text_bytes: int = 0
+    skipped_entries: list[BatchArchiveSkippedEntry] = Field(default_factory=list)
+
+
 class BatchReviewItem(BaseModel):
     filename: str
     config_text: str
@@ -331,6 +348,7 @@ class BatchReviewResponse(BaseModel):
     review_count: int
     filenames: list[str] = Field(default_factory=list)
     reviews: list[BatchReviewItem] = Field(default_factory=list)
+    archive_summary: BatchArchiveSummary | None = None
     cross_config: CrossConfigResponse | None = None
     summary: dict[str, int] = Field(default_factory=dict)
 

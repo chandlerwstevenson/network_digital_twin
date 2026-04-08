@@ -179,6 +179,37 @@ router bgp 65002
     assert len(body["inferred_links"]) >= 1
 
 
+def test_batch_review_returns_archive_intake_summary_for_skipped_entries():
+    response = client.post(
+        "/api/batch-review",
+        headers=HEADERS,
+        json={
+            "zip_filename": "mixed-batch.zip",
+            "zip_base64": make_zip_base64(
+                {
+                    "configs/router1.cfg": "hostname r1\nip http server\n",
+                    "configs/router2.cfg": "hostname r2\nline vty 0 4\n transport input telnet\n",
+                    "notes/readme.md": "deployment checklist",
+                    "configs/empty.cfg": "   \n",
+                }
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["review_count"] == 2
+    assert body["archive_summary"]["zip_filename"] == "mixed-batch.zip"
+    assert body["archive_summary"]["archive_member_count"] == 4
+    assert body["archive_summary"]["readable_config_count"] == 2
+    assert body["archive_summary"]["skipped_non_config_count"] == 1
+    assert body["archive_summary"]["skipped_empty_count"] == 1
+    skipped = {entry["filename"]: entry["reason"] for entry in body["archive_summary"]["skipped_entries"]}
+    assert skipped["notes/readme.md"] == "text file does not look like a network config"
+    assert skipped["configs/empty.cfg"] == "empty text file"
+    assert body["cross_config"] is not None
+
+
 def test_batch_review_rejects_config_larger_than_2mb():
     response = client.post(
         "/api/batch-review",
@@ -241,31 +272,87 @@ line vty 0 4
 
 
 def test_pipeline_review_can_gate_on_warning_threshold_and_attempt_webhook():
-    with patch("app.api.routes._send_review_webhook", return_value={
-        "attempted": True,
-        "delivered": True,
-        "status_code": 200,
-        "detail": "Webhook delivered.",
-    }) as send_webhook:
+    captured = {}
+
+    def fake_send(url, payload, headers):
+        captured["url"] = url
+        captured["payload"] = payload
+        captured["headers"] = headers
+        return {
+            "attempted": True,
+            "delivered": True,
+            "status_code": 200,
+            "detail": "Webhook delivered.",
+        }
+
+    with patch("app.api.routes._send_review_webhook", side_effect=fake_send) as send_webhook:
         response = client.post(
             "/api/pipeline/review",
             headers=HEADERS,
             json={
                 "config_text": """hostname r1
-interface GigabitEthernet0/0
- description Uplink
- ip address 10.0.0.1 255.255.255.0
+ip http server
+line vty 0 4
+ transport input telnet
 !""",
                 "fail_on_severity": "warning",
                 "webhook_url": "https://example.test/hooks/config-review",
+                "webhook_headers": {"X-Pipeline-Token": "abc123"},
             },
         )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["gate_status"] in ["pass", "block"]
+    assert body["gate_status"] == "block"
     assert body["webhook"]["attempted"] is True
     send_webhook.assert_called_once()
+    assert captured["url"] == "https://example.test/hooks/config-review"
+    assert captured["headers"] == {"X-Pipeline-Token": "abc123"}
+    assert captured["payload"]["event"] == "config_review.completed"
+    assert captured["payload"]["gate"]["status"] == "block"
+    assert captured["payload"]["gate"]["should_block"] is True
+    assert captured["payload"]["gate"]["fail_on_severity"] == "warning"
+    assert captured["payload"]["gate"]["blocking_findings_count"] == body["blocking_findings_count"]
+    assert captured["payload"]["summary"]["hostname"] == body["summary"]["hostname"]
+    assert len(captured["payload"]["blocking_findings"]) == body["blocking_findings_count"]
+    assert captured["payload"]["review"]["review_id"] == body["review"]["review_id"]
+
+
+def test_pipeline_review_respects_max_blocking_findings_threshold():
+    response = client.post(
+        "/api/pipeline/review",
+        headers=HEADERS,
+        json={
+            "config_text": """hostname r1
+ip http server
+!""",
+            "fail_on_severity": "warning",
+            "max_blocking_findings": 3,
+            "include_review": False,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["blocking_findings_count"] == 2
+    assert body["max_blocking_findings"] == 3
+    assert body["should_block"] is False
+    assert body["gate_status"] == "pass"
+    assert body["review"] is None
+
+
+def test_pipeline_review_rejects_invalid_webhook_url():
+    response = client.post(
+        "/api/pipeline/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "webhook_url": "ftp://example.test/not-allowed",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "webhook_url must be a valid http(s) URL."
 
 
 def test_export_review_requires_api_key():
@@ -625,3 +712,41 @@ def test_export_review_to_jira_requires_auth():
 
     assert response.status_code == 400
     assert response.json()["detail"] == "auth is required for Jira export."
+
+
+def test_export_review_to_servicenow_rejects_basic_auth_without_password():
+    response = client.post(
+        "/api/export/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "target": "servicenow",
+            "auth": {"auth_type": "basic", "username": "api-user"},
+            "service_now": {
+                "instance_url": "https://example.service-now.com",
+                "record_sys_id": "abcd1234"
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Basic auth requires username and password."
+
+
+def test_export_review_to_servicenow_rejects_invalid_instance_url():
+    response = client.post(
+        "/api/export/review",
+        headers=HEADERS,
+        json={
+            "config_text": "hostname r1\nip http server",
+            "target": "servicenow",
+            "auth": {"auth_type": "bearer", "token": "sn-token"},
+            "service_now": {
+                "instance_url": "not-a-url",
+                "record_sys_id": "abcd1234"
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert "service_now.instance_url" in response.json()["detail"]

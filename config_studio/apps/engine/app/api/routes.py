@@ -28,6 +28,8 @@ from app.api.schemas import (
     BatchReviewRequest,
     BatchReviewResponse,
     BatchReviewItem,
+    BatchArchiveSummary,
+    BatchArchiveSkippedEntry,
     NLQueryRequest,
     NLQueryResponse,
     MultiConfigQueryRequest,
@@ -199,7 +201,34 @@ def _is_probably_text(raw: bytes) -> bool:
     return bool(raw) and b"\x00" not in raw[:4096]
 
 
-def _extract_batch_zip(req: BatchReviewRequest) -> list[tuple[str, str]]:
+def _looks_like_config_text(text: str) -> bool:
+    lines = [line.strip().lower() for line in text.splitlines() if line.strip()]
+    if not lines:
+        return False
+    config_tokens = [
+        "hostname ",
+        "interface ",
+        "router ",
+        "ip route",
+        "ip access-list",
+        "line vty",
+        "snmp-server",
+        "vlan ",
+        "set interfaces",
+        "set protocols",
+        "set system",
+        "system {",
+        "interfaces {",
+        "protocols {",
+        "firewall {",
+    ]
+    if any(any(token in line for token in config_tokens) for line in lines[:25]):
+        return True
+    punctuation_heavy = sum(1 for line in lines[:25] if line.endswith(";") or line.endswith("{") or line == "!")
+    return punctuation_heavy >= 3
+
+
+def _extract_batch_zip(req: BatchReviewRequest) -> tuple[list[tuple[str, str]], BatchArchiveSummary]:
     try:
         archive_bytes = base64.b64decode(req.zip_base64)
     except Exception as exc:  # pragma: no cover
@@ -217,10 +246,22 @@ def _extract_batch_zip(req: BatchReviewRequest) -> list[tuple[str, str]]:
             detail=f"ZIP archive contains too many entries. Limit is {MAX_BATCH_ARCHIVE_MEMBERS} files per upload.",
         )
 
+    skipped_entries: list[BatchArchiveSkippedEntry] = []
     extracted: list[tuple[str, str]] = []
     total_config_bytes = 0
+    skipped_directory_count = 0
+    skipped_non_config_count = 0
+    skipped_empty_count = 0
+    skipped_undecodable_count = 0
+
+    def note_skip(filename: str, reason: str):
+        if len(skipped_entries) < 12:
+            skipped_entries.append(BatchArchiveSkippedEntry(filename=filename, reason=reason))
+
     for info in members:
         if info.is_dir():
+            skipped_directory_count += 1
+            note_skip(info.filename, "directory")
             continue
 
         suffixes = Path(info.filename).suffixes
@@ -236,6 +277,28 @@ def _extract_batch_zip(req: BatchReviewRequest) -> list[tuple[str, str]]:
             raw = handle.read()
 
         if not extension_match and not _is_probably_text(raw):
+            skipped_non_config_count += 1
+            note_skip(info.filename, "non-config or binary content")
+            continue
+
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                text = raw.decode("latin-1")
+            except UnicodeDecodeError:
+                skipped_undecodable_count += 1
+                note_skip(info.filename, "text could not be decoded")
+                continue
+
+        if not text.strip():
+            skipped_empty_count += 1
+            note_skip(info.filename, "empty text file")
+            continue
+
+        if not extension_match and not _looks_like_config_text(text):
+            skipped_non_config_count += 1
+            note_skip(info.filename, "text file does not look like a network config")
             continue
 
         total_config_bytes += len(raw)
@@ -245,22 +308,25 @@ def _extract_batch_zip(req: BatchReviewRequest) -> list[tuple[str, str]]:
                 detail="ZIP archive contains too much config data. Batch review supports up to 100 MB of extracted text across all files.",
             )
 
-        try:
-            text = raw.decode("utf-8")
-        except UnicodeDecodeError:
-            try:
-                text = raw.decode("latin-1")
-            except UnicodeDecodeError:
-                continue
-
-        if text.strip():
-            extracted.append((info.filename, text))
+        extracted.append((info.filename, text))
 
     if not extracted:
         raise HTTPException(status_code=400, detail="ZIP archive did not contain any readable config files.")
     if len(extracted) > 50:
         raise HTTPException(status_code=400, detail="Batch review supports up to 50 config files per ZIP upload.")
-    return extracted
+
+    archive_summary = BatchArchiveSummary(
+        zip_filename=req.zip_filename,
+        archive_member_count=len(members),
+        readable_config_count=len(extracted),
+        skipped_directory_count=skipped_directory_count,
+        skipped_non_config_count=skipped_non_config_count,
+        skipped_empty_count=skipped_empty_count,
+        skipped_undecodable_count=skipped_undecodable_count,
+        extracted_text_bytes=total_config_bytes,
+        skipped_entries=skipped_entries,
+    )
+    return extracted, archive_summary
 
 
 def _build_auth_headers(auth) -> dict[str, str]:
@@ -363,6 +429,22 @@ def _http_request_multipart(url: str, method: str, parts: list[dict[str, str | b
 
 def _send_review_webhook(webhook_url: str, payload: dict, headers: dict[str, str] | None = None) -> dict[str, str | bool | int | None]:
     return _http_request_json(webhook_url, "POST", payload, headers or {})
+
+
+def _build_pipeline_webhook_payload(response: PipelineReviewResponse) -> dict:
+    return {
+        "event": "config_review.completed",
+        "gate": {
+            "status": response.gate_status,
+            "should_block": response.should_block,
+            "fail_on_severity": response.fail_on_severity.value,
+            "blocking_findings_count": response.blocking_findings_count,
+            "max_blocking_findings": response.max_blocking_findings,
+        },
+        "summary": response.summary,
+        "blocking_findings": [finding.model_dump() for finding in response.blocking_findings],
+        "review": response.review.model_dump() if response.review else None,
+    }
 
 
 def _render_export_artifacts(review, attachment_prefix: str, include_pdf: bool, include_json: bool, include_html: bool) -> list[dict[str, str | bytes | int]]:
@@ -774,7 +856,7 @@ async def render_report(req: AnalyzeRequest, format: str = "html", _=Depends(_ve
 @router.post("/batch-review", response_model=BatchReviewResponse)
 async def batch_review_configs(req: BatchReviewRequest, _=Depends(_verify_key)):
     """Review a ZIP of configs in one session and optionally run cross-config correlation."""
-    extracted = _extract_batch_zip(req)
+    extracted, archive_summary = _extract_batch_zip(req)
     reviews: list[BatchReviewItem] = []
 
     for filename, config_text in extracted:
@@ -821,6 +903,7 @@ async def batch_review_configs(req: BatchReviewRequest, _=Depends(_verify_key)):
         review_count=len(reviews),
         filenames=[item.filename for item in reviews],
         reviews=reviews,
+        archive_summary=archive_summary,
         cross_config=cross_config,
         summary={
             "configs_reviewed": len(reviews),
@@ -939,17 +1022,10 @@ async def pipeline_review(req: PipelineReviewRequest, _=Depends(_verify_key)):
     )
 
     if req.webhook_url:
+        webhook_url = _require_http_url(req.webhook_url, "webhook_url")
         response.webhook = _send_review_webhook(
-            req.webhook_url,
-            {
-                "event": "config_review.completed",
-                "gate_status": response.gate_status,
-                "should_block": response.should_block,
-                "fail_on_severity": response.fail_on_severity.value,
-                "blocking_findings_count": response.blocking_findings_count,
-                "summary": response.summary,
-                "review": response.review.model_dump() if response.review else None,
-            },
+            webhook_url,
+            _build_pipeline_webhook_payload(response),
             req.webhook_headers,
         )
 
