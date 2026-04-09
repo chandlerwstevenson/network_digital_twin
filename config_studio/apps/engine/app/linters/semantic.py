@@ -336,35 +336,83 @@ class SemanticLinter(BaseLinter):
 
             entries = []
             for j, subline in enumerate(section.lines[1:], start=1):  # Skip the ACL definition line
-                m = re.match(r"(permit|deny)\s+(.+)", subline.strip(), re.IGNORECASE)
-                if m:
-                    entries.append({
-                        "action": m.group(1).lower(),
-                        "rule": m.group(2),
-                        "line": section.start_line + j,
-                        "index": j,
-                    })
+                parsed_entry = self._parse_acl_entry(subline.strip())
+                if parsed_entry:
+                    parsed_entry["line"] = section.start_line + j
+                    parsed_entry["index"] = j
+                    entries.append(parsed_entry)
 
-            # Simple shadowing: if a "deny any" appears before "permit" entries
             for idx, entry in enumerate(entries):
-                if "any" in entry["rule"] and "any" in entry["rule"]:
-                    # Check if there are more specific entries after this
-                    later_entries = entries[idx + 1:]
-                    if later_entries and entry["action"] in ("deny", "permit"):
-                        findings.append(self._make_finding(
-                            line_start=entry["line"],
-                            line_end=entry["line"],
-                            severity=Severity.WARNING,
-                            category=FindingCategory.BEST_PRACTICE,
-                            title=f"Potential ACL shadowing in {section.name}",
-                            description=f"'{entry['action']} {entry['rule']}' matches all traffic but there are "
-                                        f"{len(later_entries)} more specific entries after it that will never be evaluated.",
-                            remediation="! Reorder ACL entries — place more specific rules before broad rules",
-                            rollback="! Restore original ACL entry order",
-                        ))
-                        break  # Only flag once per ACL
+                later_entries = entries[idx + 1:]
+                if not later_entries:
+                    continue
+
+                shadowed_count = sum(1 for later in later_entries if self._acl_entry_shadows(entry, later))
+                if shadowed_count:
+                    findings.append(self._make_finding(
+                        line_start=entry["line"],
+                        line_end=entry["line"],
+                        severity=Severity.WARNING,
+                        category=FindingCategory.BEST_PRACTICE,
+                        title=f"Potential ACL shadowing in {section.name}",
+                        description=f"'{entry['action']} {entry['rule']}' is broad enough to match before "
+                                    f"{shadowed_count} later ACL entr{'y' if shadowed_count == 1 else 'ies'}, so those rules may never be evaluated.",
+                        remediation="! Reorder ACL entries — place more specific rules before broad rules",
+                        rollback="! Restore original ACL entry order",
+                    ))
+                    break  # Only flag once per ACL
 
         return findings
+
+    @staticmethod
+    def _parse_acl_entry(line: str) -> dict | None:
+        match = re.match(r"(permit|deny)\s+(\S+)\s+(.+)", line, re.IGNORECASE)
+        if not match:
+            return None
+
+        return {
+            "action": match.group(1).lower(),
+            "protocol": match.group(2).lower(),
+            "rule": f"{match.group(2)} {match.group(3)}",
+            "tokens": match.group(3).lower().split(),
+        }
+
+    @classmethod
+    def _acl_entry_shadows(cls, earlier: dict, later: dict) -> bool:
+        if earlier["protocol"] not in {"ip", later["protocol"]}:
+            return False
+
+        earlier_tokens = earlier.get("tokens", [])
+        later_tokens = later.get("tokens", [])
+        if len(earlier_tokens) < 2 or len(later_tokens) < 2:
+            return False
+
+        earlier_src, earlier_dst = earlier_tokens[0], earlier_tokens[1]
+        later_src, later_dst = later_tokens[0], later_tokens[1]
+
+        earlier_is_any_any = earlier_src == "any" and earlier_dst == "any"
+        if earlier_is_any_any and cls._acl_has_only_non_narrowing_trailers(earlier_tokens[2:]):
+            return True
+
+        same_match_scope = (
+            earlier["protocol"] == later["protocol"]
+            and earlier_src == later_src
+            and earlier_dst == later_dst
+            and len(earlier_tokens) <= len(later_tokens)
+        )
+        if same_match_scope:
+            return earlier_tokens == later_tokens[:len(earlier_tokens)]
+
+        return False
+
+    @staticmethod
+    def _acl_has_only_non_narrowing_trailers(tokens: list[str]) -> bool:
+        """Return True when trailing ACL tokens add logging/commentary but do not narrow match scope."""
+        if not tokens:
+            return True
+
+        non_narrowing_tokens = {"log", "log-input"}
+        return all(token in non_narrowing_tokens for token in tokens)
 
     @staticmethod
     def _parse_vlan_range(vlan_str: str) -> list[int]:

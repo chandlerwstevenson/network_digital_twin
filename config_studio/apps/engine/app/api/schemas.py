@@ -48,6 +48,7 @@ class AnalyzeRequest(BaseModel):
     config_text: str = Field(..., min_length=1, max_length=500_000)
     vendor: Vendor | None = None  # None = auto-detect
     os_version: str | None = None
+    hostname: str | None = None
     template_id: str | None = None
     template_name: str | None = None
     template_version: str | None = None
@@ -57,12 +58,33 @@ class AnalyzeRequest(BaseModel):
     snippet_mode: bool | None = None  # None = auto-detect
     context_hint: str | None = None  # e.g. "interface", "bgp_neighbor"
 
+    @field_validator("hostname")
+    @classmethod
+    def _normalize_hostname(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            return None
+        return value[:255]
+
 
 class CompareRequest(BaseModel):
     """Running vs. startup config comparison."""
     running_config: str = Field(..., min_length=1, max_length=500_000)
     startup_config: str = Field(..., min_length=1, max_length=500_000)
     vendor: Vendor | None = None
+    hostname: str | None = None
+
+    @field_validator("hostname")
+    @classmethod
+    def _normalize_compare_hostname(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            return None
+        return value[:255]
 
 
 class CrossConfigInput(BaseModel):
@@ -334,6 +356,8 @@ class AnalyzeResponse(BaseModel):
 
 
 class CompareResponse(BaseModel):
+    hostname: str | None = None
+    platform_detected: str
     lost_on_reload: list[Finding]
     added_since_startup: list[dict]
     removed_since_startup: list[dict]

@@ -31,11 +31,21 @@ class SecurityLinter(BaseLinter):
         findings: list[Finding] = []
         full_text = "\n".join(lines)
 
+        def first_meaningful_line() -> int:
+            for idx, raw in enumerate(lines, start=1):
+                stripped = raw.strip()
+                if stripped and not stripped.startswith("!"):
+                    return idx
+            return 1
+
         has_aaa = False
         has_http_server = False
         has_https_server = False
         has_copp = False
         has_enable_secret = False
+        http_server_line: int | None = None
+        aaa_anchor_line: int | None = None
+        copp_anchor_line: int | None = None
         in_line_section = False
         in_interface_section = False
         current_line_type = ""
@@ -223,16 +233,23 @@ class SecurityLinter(BaseLinter):
             # --- HTTP server without HTTPS ---
             if re.search(r"^ip http server\b", stripped):
                 has_http_server = True
+                http_server_line = line_num
             if re.search(r"^ip http secure-server\b", stripped):
                 has_https_server = True
 
             # --- AAA detection ---
             if stripped.startswith("aaa new-model") or stripped.startswith("aaa authentication"):
                 has_aaa = True
+                aaa_anchor_line = line_num
+            elif aaa_anchor_line is None and (stripped.startswith("line vty") or stripped.startswith("line con") or stripped.startswith("username ") or stripped.startswith("enable ")):
+                aaa_anchor_line = line_num
 
             # --- CoPP detection ---
             if "control-plane" in stripped.lower() or "copp" in stripped.lower():
                 has_copp = True
+                copp_anchor_line = line_num
+            elif copp_anchor_line is None and stripped.startswith("interface "):
+                copp_anchor_line = line_num
 
             # --- Auxiliary port with no auth ---
             if in_line_section and "line aux" in current_line_type:
@@ -267,9 +284,10 @@ class SecurityLinter(BaseLinter):
 
         # --- Post-scan global checks ---
         if has_http_server and not has_https_server:
+            http_line = http_server_line or first_meaningful_line()
             findings.append(self._make_finding(
-                line_start=1,
-                line_end=1,
+                line_start=http_line,
+                line_end=http_line,
                 severity=Severity.WARNING,
                 category=FindingCategory.SECURITY,
                 title="HTTP server enabled without HTTPS",
@@ -281,9 +299,10 @@ class SecurityLinter(BaseLinter):
             ))
 
         if not has_aaa:
+            aaa_line = aaa_anchor_line or first_meaningful_line()
             findings.append(self._make_finding(
-                line_start=1,
-                line_end=1,
+                line_start=aaa_line,
+                line_end=aaa_line,
                 severity=Severity.WARNING,
                 category=FindingCategory.SECURITY,
                 title="No AAA configuration detected",
@@ -296,9 +315,10 @@ class SecurityLinter(BaseLinter):
             ))
 
         if not has_copp:
+            copp_line = copp_anchor_line or first_meaningful_line()
             findings.append(self._make_finding(
-                line_start=1,
-                line_end=1,
+                line_start=copp_line,
+                line_end=copp_line,
                 severity=Severity.INFO,
                 category=FindingCategory.SECURITY,
                 title="No Control Plane Policing (CoPP) detected",
@@ -313,14 +333,43 @@ class SecurityLinter(BaseLinter):
 
     def _lint_junos(self, lines: list[str]) -> list[Finding]:
         findings: list[Finding] = []
-        full_text = "\n".join(lines)
+
+        def first_meaningful_line() -> int:
+            for idx, raw in enumerate(lines, start=1):
+                stripped = raw.strip()
+                if stripped and not stripped.startswith("#"):
+                    return idx
+            return 1
 
         has_ssh = False
         has_telnet = False
+        has_https_web_mgmt = False
+        has_http_web_mgmt = False
+        has_aaa = False
+        http_mgmt_line: int | None = None
+        aaa_anchor_line: int | None = None
+        mgmt_service_lines: list[int] = []
+        public_interface_lines: list[tuple[str, int, str]] = []
+        hierarchy_stack: list[str] = []
+
+        def stack_endswith(*segments: str) -> bool:
+            if len(hierarchy_stack) < len(segments):
+                return False
+            return [segment.lower() for segment in hierarchy_stack[-len(segments):]] == [segment.lower() for segment in segments]
 
         for i, line in enumerate(lines):
             stripped = line.strip()
             line_num = i + 1
+            lower = stripped.lower()
+
+            if stripped == "}":
+                if hierarchy_stack:
+                    hierarchy_stack.pop()
+                continue
+
+            hierarchical_block = stripped.endswith("{")
+            block_name = stripped[:-1].strip() if hierarchical_block else ""
+            block_name_lower = block_name.lower()
 
             # Plaintext passwords in JunOS
             if re.search(r"plain-text-password", stripped):
@@ -331,28 +380,32 @@ class SecurityLinter(BaseLinter):
                     category=FindingCategory.SECURITY,
                     title="Plaintext password in JunOS config",
                     description="A password is configured in plaintext. Use encrypted-password instead.",
-                    remediation="! Replace with encrypted-password hash",
-                    rollback="! N/A",
+                    remediation="delete system login user <user> authentication plain-text-password\nset system login user <user> authentication encrypted-password <hash>",
+                    rollback="set system login user <user> authentication plain-text-password",
                     compliance_tags=["PCI-DSS-8.2.1", "NIST-800-53-IA-5"],
                 ))
 
             # Default SNMP communities in JunOS
-            if re.search(r"community\s+(public|private)", stripped, re.IGNORECASE):
+            if re.search(r"community\s+(public|private)(\s|;|$)", stripped, re.IGNORECASE):
+                community_match = re.search(r"community\s+(public|private)", stripped, re.IGNORECASE)
+                community = community_match.group(1) if community_match else "public"
                 findings.append(self._make_finding(
                     line_start=line_num,
                     line_end=line_num,
                     severity=Severity.CRITICAL,
                     category=FindingCategory.SECURITY,
                     title="Default SNMP community string in JunOS",
-                    description="Default SNMP community detected. Change to a strong, unique string.",
-                    remediation="delete snmp community public\nset snmp community <strong-string> authorization read-only",
-                    rollback="set snmp community public authorization read-only",
-                    compliance_tags=["PCI-DSS-2.1", "CIS-Juniper"],
+                    description=f"Default SNMP community '{community}' detected. Change to a strong, unique string and restrict it.",
+                    remediation=f"delete snmp community {community}\nset snmp community <strong-string> authorization read-only\nset snmp community <strong-string> clients <trusted-prefix>",
+                    rollback=f"set snmp community {community} authorization read-only",
+                    compliance_tags=["PCI-DSS-2.1", "CIS-Juniper", "NIST-800-53-CM-6"],
                 ))
+                mgmt_service_lines.append(line_num)
 
-            # Telnet service
-            if "system services telnet" in stripped or "set system services telnet" in stripped:
+            telnet_hierarchical = stack_endswith("system", "services") and lower == "telnet;"
+            if "system services telnet" in lower or telnet_hierarchical:
                 has_telnet = True
+                mgmt_service_lines.append(line_num)
                 findings.append(self._make_finding(
                     line_start=line_num,
                     line_end=line_num,
@@ -363,10 +416,97 @@ class SecurityLinter(BaseLinter):
                     remediation="delete system services telnet\nset system services ssh",
                     rollback="set system services telnet",
                     compliance_tags=["PCI-DSS-4.1", "CIS-Juniper"],
+                    reference_url="https://www.juniper.net/documentation/us/en/software/junos/cli-reference/topics/ref/statement/telnet-edit-system-services.html",
                 ))
 
-            if "system services ssh" in stripped:
+            ssh_hierarchical = stack_endswith("system", "services") and lower == "ssh;"
+            if "system services ssh" in lower or ssh_hierarchical:
                 has_ssh = True
+                mgmt_service_lines.append(line_num)
+
+            http_hierarchical = stack_endswith("system", "services", "web-management") and (lower == "http;" or block_name_lower == "http")
+            if "system services web-management http" in lower or http_hierarchical:
+                has_http_web_mgmt = True
+                http_mgmt_line = line_num
+                mgmt_service_lines.append(line_num)
+
+            https_hierarchical = stack_endswith("system", "services", "web-management") and (lower == "https;" or block_name_lower == "https")
+            if "system services web-management https" in lower or https_hierarchical:
+                has_https_web_mgmt = True
+                mgmt_service_lines.append(line_num)
+
+            if any(token in lower for token in ["system tacplus-server", "system radius-server", "authentication-order [ tacplus", "authentication-order [ radius", "authentication-order tacplus", "authentication-order radius"]):
+                has_aaa = True
+                aaa_anchor_line = line_num
+            elif stack_endswith("system") and block_name_lower in {"tacplus-server", "radius-server"}:
+                has_aaa = True
+                aaa_anchor_line = line_num
+            elif aaa_anchor_line is None and ("system login user" in lower or "system services ssh" in lower or ssh_hierarchical or stripped.startswith("system {") or stripped.startswith("set system ")):
+                aaa_anchor_line = line_num
+
+            if lower.startswith("set interfaces ") and " family inet address " in lower:
+                m = re.match(r"set interfaces\s+(\S+)(?:\s+unit\s+\S+)?\s+family inet address\s+([^\s;]+)", stripped, re.IGNORECASE)
+                if m:
+                    interface_name = m.group(1)
+                    ip_text = m.group(2).split("/")[0]
+                    if self._is_public_ipv4(ip_text):
+                        public_interface_lines.append((interface_name, line_num, ip_text))
+
+            if hierarchy_stack and len(hierarchy_stack) >= 4 and hierarchy_stack[0].lower() == "interfaces" and hierarchy_stack[-2].lower().startswith("unit ") and hierarchy_stack[-1].lower() == "family inet" and lower.startswith("address "):
+                interface_name = hierarchy_stack[1] if len(hierarchy_stack) > 1 else None
+                address_match = re.match(r"address\s+([^\s;]+)", stripped, re.IGNORECASE)
+                if interface_name and address_match:
+                    ip_text = address_match.group(1).split("/")[0]
+                    if self._is_public_ipv4(ip_text):
+                        public_interface_lines.append((interface_name, line_num, ip_text))
+
+            if hierarchical_block:
+                hierarchy_stack.append(block_name)
+
+        if has_http_web_mgmt and not has_https_web_mgmt:
+            http_line = http_mgmt_line or next((line for line in mgmt_service_lines if line), first_meaningful_line())
+            findings.append(self._make_finding(
+                line_start=http_line,
+                line_end=http_line,
+                severity=Severity.WARNING,
+                category=FindingCategory.SECURITY,
+                title="JunOS HTTP management enabled without HTTPS",
+                description="JunOS web management is enabled over HTTP but HTTPS is not configured. Management traffic may be exposed in cleartext.",
+                remediation="delete system services web-management http\nset system services web-management https system-generated-certificate",
+                rollback="set system services web-management http",
+                compliance_tags=["PCI-DSS-4.1", "NIST-800-53-SC-8"],
+                reference_url="https://www.juniper.net/documentation/us/en/software/junos/cli-reference/topics/ref/statement/web-management-edit-system.html",
+            ))
+
+        if not has_aaa:
+            aaa_line = aaa_anchor_line or first_meaningful_line()
+            findings.append(self._make_finding(
+                line_start=aaa_line,
+                line_end=aaa_line,
+                severity=Severity.WARNING,
+                category=FindingCategory.SECURITY,
+                title="No TACACS+ or RADIUS configuration detected in JunOS config",
+                description="No TACACS+ or RADIUS configuration was found. Centralized AAA is missing, so administrative authentication appears to rely on local accounts only.",
+                remediation="set system tacplus-server <server-ip> secret <secret>\nset system authentication-order [ tacplus password ]",
+                rollback="delete system tacplus-server <server-ip>\nset system authentication-order password",
+                compliance_tags=["CIS-Juniper", "DISA-STIG", "NIST-800-53-IA-2", "PCI-DSS-8.1"],
+                reference_url="https://www.juniper.net/documentation/us/en/software/junos/user-access/topics/topic-map/user-access-tacacs-authentication.html",
+            ))
+
+        if public_interface_lines and any([has_ssh, has_telnet, has_http_web_mgmt, has_https_web_mgmt, mgmt_service_lines]):
+            for interface_name, line_num, ip_text in public_interface_lines:
+                findings.append(self._make_finding(
+                    line_start=line_num,
+                    line_end=line_num,
+                    severity=Severity.INFO,
+                    category=FindingCategory.SECURITY,
+                    title=f"Management plane may be exposed on {interface_name}",
+                    description=f"Interface {interface_name} has public-looking address {ip_text} while JunOS management services are enabled elsewhere in the config. Verify SSH, SNMP, or web management are not exposed to untrusted networks.",
+                    remediation=f"set firewall family inet filter PROTECT-RE management-term from source-address <trusted-prefix>\nset firewall family inet filter PROTECT-RE management-term then accept\nset interfaces {interface_name} unit 0 family inet filter input PROTECT-RE",
+                    rollback=f"delete interfaces {interface_name} unit 0 family inet filter input PROTECT-RE",
+                    compliance_tags=["PCI-DSS-4.1", "NIST-800-53-SC-7"],
+                    reference_url="https://www.rfc-editor.org/rfc/rfc5737",
+                ))
 
         return findings
 

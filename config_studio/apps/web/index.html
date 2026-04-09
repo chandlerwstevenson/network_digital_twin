@@ -7,8 +7,12 @@
   <style>
     :root {
       --bg: #0b1020;
-      --panel: #121a2b;
+      --panel: rgba(18, 26, 43, 0.92);
       --panel-2: #182338;
+      --surface-1: #0d1628;
+      --surface-2: #09101d;
+      --surface-3: #050b16;
+      --input-bg: #0c1323;
       --text: #e8eefc;
       --muted: #9fb0d1;
       --border: #263555;
@@ -17,23 +21,60 @@
       --warn: #f7c66b;
       --bad: #ff7b8b;
       --info: #8ab4ff;
+      --page-bg-start: #09101d;
+      --page-bg-end: #0e1628;
+      --shadow: 0 10px 35px rgba(0,0,0,.25);
+      --hover-overlay: rgba(255,255,255,0.03);
+      --selected-overlay: rgba(110,168,254,0.12);
+      --focus-overlay: rgba(77,212,172,0.12);
+      --search-hit-overlay: rgba(247,198,107,0.10);
+      --search-current-overlay: rgba(247,198,107,0.18);
+      --search-current-ring: rgba(247,198,107,0.35);
+    }
+    :root[data-theme="light"] {
+      --bg: #f3f7ff;
+      --panel: rgba(255, 255, 255, 0.96);
+      --panel-2: #e8eefc;
+      --surface-1: #f6f9ff;
+      --surface-2: #edf3ff;
+      --surface-3: #e3ebfb;
+      --input-bg: #ffffff;
+      --text: #10203d;
+      --muted: #526685;
+      --border: #c7d4ea;
+      --accent: #245dca;
+      --good: #087f5b;
+      --warn: #9a6700;
+      --bad: #b4233c;
+      --info: #245dca;
+      --page-bg-start: #f7faff;
+      --page-bg-end: #edf3ff;
+      --shadow: 0 10px 28px rgba(16,32,61,.08);
+      --hover-overlay: rgba(16,32,61,0.04);
+      --selected-overlay: rgba(36,93,202,0.10);
+      --focus-overlay: rgba(8,127,91,0.10);
+      --search-hit-overlay: rgba(154,103,0,0.10);
+      --search-current-overlay: rgba(154,103,0,0.16);
+      --search-current-ring: rgba(154,103,0,0.28);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(180deg, #09101d 0%, #0e1628 100%);
+      background: linear-gradient(180deg, var(--page-bg-start) 0%, var(--page-bg-end) 100%);
       color: var(--text);
     }
     .app { max-width: 1440px; margin: 0 auto; padding: 24px; display: grid; gap: 20px; }
     .hero { display: flex; justify-content: space-between; gap: 16px; align-items: end; flex-wrap: wrap; }
     .hero h1 { margin: 0 0 6px; font-size: 32px; }
     .hero p { margin: 0; color: var(--muted); max-width: 900px; }
+    .hero-side { display: grid; gap: 10px; justify-items: end; min-width: 240px; }
+    .theme-picker { width: min(280px, 100%); }
     .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
-    .panel { background: rgba(18, 26, 43, 0.92); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: 0 10px 35px rgba(0,0,0,.25); }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
     .panel h2, .panel h3 { margin-top: 0; }
     .muted { color: var(--muted); }
-    textarea, input, select { width: 100%; background: #0c1323; color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; }
+    textarea, input, select { width: 100%; background: var(--input-bg); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font: inherit; }
     textarea { min-height: 240px; resize: vertical; }
     .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
     .row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
@@ -42,18 +83,18 @@
     button.primary { background: var(--accent); color: #081120; }
     button:hover { filter: brightness(1.06); }
     .chips { display: flex; gap: 10px; flex-wrap: wrap; }
-    .chip { padding: 8px 10px; border-radius: 999px; background: #0d1628; border: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+    .chip { padding: 8px 10px; border-radius: 999px; background: var(--surface-1); border: 1px solid var(--border); color: var(--muted); font-size: 13px; }
     .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .stat { background: #0d1628; border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+    .stat { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
     .stat .label { color: var(--muted); font-size: 13px; }
     .stat .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
-    .finding { border: 1px solid var(--border); border-left: 5px solid var(--info); border-radius: 12px; padding: 12px 14px; background: #0d1628; margin-bottom: 12px; }
+    .finding { border: 1px solid var(--border); border-left: 5px solid var(--info); border-radius: 12px; padding: 12px 14px; background: var(--surface-1); margin-bottom: 12px; }
     .finding.critical { border-left-color: var(--bad); }
     .finding.warning { border-left-color: var(--warn); }
     .finding.info { border-left-color: var(--info); }
     .finding h4 { margin: 0 0 8px; }
     .finding p { margin: 6px 0; }
-    .finding pre { white-space: pre-wrap; background: #09101d; border: 1px solid var(--border); border-radius: 10px; padding: 10px; overflow-x: auto; }
+    .finding pre { white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; overflow-x: auto; }
     .split { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
     .badge.critical { background: rgba(255,123,139,.16); color: var(--bad); }
@@ -64,35 +105,42 @@
     .list { margin: 8px 0 0; padding-left: 18px; }
     .toolbar-note { margin-top: 10px; color: var(--muted); font-size: 13px; }
     .history-list { display: grid; gap: 10px; margin-top: 12px; }
-    .history-item { border: 1px solid var(--border); border-radius: 12px; background: #0d1628; padding: 12px; }
+    .history-item { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); padding: 12px; }
     .history-item button { margin-top: 10px; }
     .history-meta { color: var(--muted); font-size: 12px; }
-    .config-viewer-shell { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: #09101d; }
-    .config-viewer-toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border); background: #0d1628; flex-wrap: wrap; }
+    .config-viewer-shell { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--surface-2); }
+    .config-viewer-toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--surface-1); flex-wrap: wrap; }
     .config-viewer { max-height: 480px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; }
     .config-line { display: grid; grid-template-columns: 68px 1fr; gap: 12px; padding: 3px 14px; white-space: pre-wrap; }
-    .config-line:hover { background: rgba(255,255,255,0.03); }
-    .config-line.selected { background: rgba(110,168,254,0.12); }
+    .config-line:hover { background: var(--hover-overlay); }
+    .config-line.selected { background: var(--selected-overlay); }
     .config-line.selected .config-line-number { color: var(--accent); }
-    .config-line.focus { background: rgba(77,212,172,0.12); }
+    .config-line.focus { background: var(--focus-overlay); }
     .config-line.focus .config-line-number { color: var(--good); }
+    .config-line.search-hit { background: var(--search-hit-overlay); }
+    .config-line.search-hit .config-line-number { color: var(--warn); }
+    .config-line.search-hit.search-current { background: var(--search-current-overlay); box-shadow: inset 0 0 0 1px var(--search-current-ring); }
     .config-line-number { color: var(--muted); text-align: right; user-select: none; }
     .config-line-text { overflow-wrap: anywhere; }
     .finding-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .worklist-summary { display: grid; gap: 12px; }
     .worklist-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .worklist-item { border: 1px solid var(--border); border-radius: 12px; background: #0d1628; padding: 12px; }
+    .worklist-item { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); padding: 12px; }
     .worklist-item.done { opacity: 0.72; }
     .worklist-item-header { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
     .worklist-meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
-    .mini-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--border); background: #09101d; color: var(--muted); font-size: 12px; }
-    .change-plan-card { border: 1px solid var(--border); border-radius: 12px; background: #09101d; padding: 12px; margin-top: 12px; }
-    .change-plan-card pre { white-space: pre-wrap; background: #050b16; border: 1px solid var(--border); border-radius: 10px; padding: 10px; overflow-x: auto; }
+    .mini-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); font-size: 12px; }
+    .change-plan-card { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); padding: 12px; margin-top: 12px; }
+    .change-plan-card pre { white-space: pre-wrap; background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 10px; overflow-x: auto; }
     .template-builder-grid { display: grid; grid-template-columns: 1.2fr .9fr; gap: 18px; }
-    .template-rule-card, .template-version-card { border: 1px solid var(--border); border-radius: 12px; background: #0d1628; padding: 12px; margin-top: 10px; }
-    .template-rule-card pre, .template-version-card pre { white-space: pre-wrap; background: #09101d; border: 1px solid var(--border); border-radius: 10px; padding: 10px; overflow-x: auto; }
-    button.secondary-action { background: #0d1628; }
-    @media (max-width: 1100px) { .grid, .split, .stats, .row, .row-3 { grid-template-columns: 1fr; } }
+    .template-rule-card, .template-version-card { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); padding: 12px; margin-top: 10px; }
+    .template-rule-card pre, .template-version-card pre { white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; overflow-x: auto; }
+    button.secondary-action { background: var(--surface-1); }
+    @media (max-width: 1100px) {
+      .grid, .split, .stats, .row, .row-3 { grid-template-columns: 1fr; }
+      .hero-side { justify-items: start; width: 100%; }
+      .theme-picker { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -105,16 +153,27 @@
           ask natural-language questions, and attach results directly to Jira or ServiceNow.
         </p>
       </div>
-      <div class="chips">
-        <div class="chip">Paste-to-review</div>
-        <div class="chip">File upload</div>
-        <div class="chip">Snippet mode</div>
-        <div class="chip">Quick-pass</div>
-        <div class="chip">Running vs startup compare</div>
-        <div class="chip">Natural-language query</div>
-        <div class="chip">JSON / PDF export</div>
-        <div class="chip">Multi-device correlation</div>
-        <div class="chip">Batch ZIP review</div>
+      <div class="hero-side">
+        <label class="theme-picker">
+          <span class="muted">Display theme</span>
+          <select id="themeMode">
+            <option value="auto">Auto</option>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+        <div id="themeStatus" class="history-meta">Theme follows this device automatically.</div>
+        <div class="chips">
+          <div class="chip">Paste-to-review</div>
+          <div class="chip">File upload</div>
+          <div class="chip">Snippet mode</div>
+          <div class="chip">Quick-pass</div>
+          <div class="chip">Running vs startup compare</div>
+          <div class="chip">Natural-language query</div>
+          <div class="chip">JSON / PDF export</div>
+          <div class="chip">Multi-device correlation</div>
+          <div class="chip">Batch ZIP review</div>
+        </div>
       </div>
     </section>
 
@@ -149,6 +208,10 @@
             <input id="engineerName" placeholder="Engineer / reviewer name" />
           </label>
           <label>
+            <span class="muted">Hostname override</span>
+            <input id="hostnameOverride" placeholder="Optional: set device name when auto-detect fails" />
+          </label>
+          <label>
             <span class="muted">Applied template</span>
             <select id="starterTemplate">
               <option value="">Platform baseline review</option>
@@ -160,6 +223,7 @@
           <label><input id="quickPass" type="checkbox" /> Quick-pass mode</label>
           <label><input id="forceSnippet" type="checkbox" /> Force snippet mode</label>
         </div>
+        <div class="toolbar-note">If the pasted config is a snippet or a scrubbed export with no hostname line, set a hostname override so reports, query history, and change-record exports do not degrade to “Unknown device.”</div>
 
         <label>
           <span class="muted">Upload config file</span>
@@ -191,7 +255,7 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel" id="analysisSummarySection">
         <h2>Analysis summary</h2>
         <div id="summaryState" class="muted">No review yet.</div>
         <div id="stats" class="stats" style="display:none; margin-top: 14px;"></div>
@@ -216,7 +280,7 @@
       </section>
     </div>
 
-    <section class="panel">
+    <section class="panel" id="templateAuthoringSection">
       <h2>Template authoring</h2>
       <p class="muted">Build org-specific checks without writing code, then save immutable template versions so every review can point back to the exact standard in force at review time.</p>
       <div class="template-builder-grid">
@@ -295,9 +359,9 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="findingsSection">
       <h2>Findings</h2>
-      <div class="row">
+      <div class="row" id="findingsToolbarRow">
         <label>
           <span class="muted">Severity view</span>
           <select id="severityFilter">
@@ -309,26 +373,36 @@
         </label>
         <div class="muted" style="display:flex; align-items:end;">Use quick-pass for a fast go / no-go read, then switch back to the full review when you need the detail.</div>
       </div>
-      <div class="toolbar-note">Severity filter is remembered for this browser session so engineers can keep the same threshold during a change window.</div>
+      <div class="toolbar-note" id="findingsToolbarNote">This threshold is remembered for the current browser session and now carries through the workspace so engineers can keep the same triage posture during a change window.</div>
       <div id="findingsList" class="muted">Run an analysis to see findings.</div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="configNavigatorSection">
       <h2>Config navigator</h2>
       <p class="muted">Operator workflow fix: jump from any finding straight to the exact lines in the submitted config, keep the relevant block highlighted, and copy remediation without hunting.</p>
       <div id="navigatorState" class="muted">Run an analysis to load a line-numbered config view.</div>
       <div id="configNavigator"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="batchReviewSection">
       <h2>Batch review</h2>
       <p class="muted">Bulk-review a ZIP of configs in one session, then triage which devices passed, failed, or need immediate attention.</p>
       <div id="batchReviewResults" class="muted">No batch review yet.</div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="multiConfigSection">
       <h2>Multi-config correlation</h2>
       <p class="muted">Submit 2 configs, catch cross-device mismatches, then ask questions across both devices without grepping by hand.</p>
+      <div class="row">
+        <label>
+          <span class="muted">Config A hostname override</span>
+          <input id="multiHostnameA" placeholder="Optional: name device A when config is scrubbed" />
+        </label>
+        <label>
+          <span class="muted">Config B hostname override</span>
+          <input id="multiHostnameB" placeholder="Optional: name device B when config is scrubbed" />
+        </label>
+      </div>
       <div class="split">
         <label>
           <span class="muted">Config A</span>
@@ -355,9 +429,15 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="compareSection">
       <h2>Running vs startup compare</h2>
       <p class="muted">Highlight commands that will be lost on reload so you can catch “worked until reboot” issues before the maintenance window ends.</p>
+      <div class="row">
+        <label>
+          <span class="muted">Compare hostname override</span>
+          <input id="compareHostname" placeholder="Optional: set device name when compare inputs are scrubbed" />
+        </label>
+      </div>
       <div class="split">
         <label>
           <span class="muted">Running config</span>
@@ -375,6 +455,10 @@
     </section>
   </div>
 
+  <script src="./ui_helpers.js"></script>
+  <script src="./batch_queue_ui.js"></script>
+  <script src="./quick_pass_ui.js"></script>
+  <script src="./theme_ui.js"></script>
   <script>
     const ENGINE_API_KEY = 'dev-engine-key';
     const SESSION_STORAGE_KEYS = {
@@ -385,10 +469,12 @@
       exportPrefs: 'configStudio.exportPrefs',
       batchProgress: 'configStudio.batchProgress',
       exportHistory: 'configStudio.exportHistory',
+      themePreference: 'configStudio.themePreference',
     };
     const LOCAL_STORAGE_KEYS = {
       customTemplates: 'configStudio.customTemplates',
       exportPresets: 'configStudio.exportPresets',
+      themePreference: 'configStudio.themePreference',
     };
     let currentReview = null;
     let currentBatchReview = null;
@@ -398,6 +484,15 @@
     let templateDraftRules = [];
     let currentFocusRange = null;
     let currentWorklistState = {};
+    let currentNavigatorSearchState = {
+      term: '',
+      matches: [],
+      currentIndex: -1,
+    };
+    const UiHelpers = window.ConfigStudioUiHelpers || {};
+    const BatchQueueUi = window.ConfigStudioBatchQueueUi || {};
+    const QuickPassUi = window.ConfigStudioQuickPassUi || {};
+    const ThemeUi = window.ConfigStudioThemeUi || {};
     const MAX_SINGLE_CONFIG_BYTES = 2 * 1024 * 1024;
     const SUPPORTED_SINGLE_CONFIG_SUFFIXES = ['.txt.bak', '.txt', '.conf', '.cfg', '.log', '.config', '.cnf', '.bak'];
 
@@ -973,6 +1068,10 @@
       document.getElementById('severityFilter').value = savedSeverity;
       customTemplates = loadPersistentValue(LOCAL_STORAGE_KEYS.customTemplates, []);
       exportPresets = loadPersistentValue(LOCAL_STORAGE_KEYS.exportPresets, []);
+      const themePreference = ThemeUi.getStoredThemePreference
+        ? ThemeUi.getStoredThemePreference(localStorage)
+        : loadPersistentValue(LOCAL_STORAGE_KEYS.themePreference, 'auto');
+      if (ThemeUi.applyThemePreference) ThemeUi.applyThemePreference(document, themePreference);
       renderQueryHistory();
       renderMultiQueryHistory();
       renderTemplateDraft();
@@ -1590,15 +1689,38 @@
       setNavigatorFocus(nextItem.finding.line_start, nextItem.finding.line_end);
     }
 
-    function renderStats(summary, risk, passFail) {
+    function renderStats(review) {
       const stats = document.getElementById('stats');
+      const mode = getSeverityFilterMode();
+      const visibleSummary = getVisibleFindingSummary(review?.findings || [], mode);
+      const totalFindings = review?.summary?.total_findings || 0;
+      const hiddenCount = Math.max(totalFindings - visibleSummary.total, 0);
+      const quickPassActive = isQuickPassActive();
+      const findingsLabel = quickPassActive
+        ? 'Critical issues now'
+        : mode === 'all'
+          ? 'Findings'
+          : `Visible (${getSeverityFilterLabel(mode)})`;
+      const findingsValue = quickPassActive
+        ? `${visibleSummary.critical}${hiddenCount ? `<div class="history-meta">${hiddenCount} warning/info findings suppressed for quick-pass</div>` : '<div class="history-meta">No critical issues detected</div>'}`
+        : mode === 'all'
+          ? `${totalFindings}`
+          : `${visibleSummary.total}${hiddenCount ? `<div class="history-meta">${hiddenCount} hidden by threshold</div>` : '<div class="history-meta">No hidden findings</div>'}`;
+      const header = review?.report?.header || {};
       stats.style.display = 'grid';
-      stats.innerHTML = `
-        <div class="stat"><div class="label">Status</div><div class="value status ${passFail ? 'pass' : 'fail'}">${passFail ? 'PASS' : 'FAIL'}</div></div>
-        <div class="stat"><div class="label">Risk score</div><div class="value">${risk.score}</div></div>
-        <div class="stat"><div class="label">Grade</div><div class="value">${risk.grade}</div></div>
-        <div class="stat"><div class="label">Findings</div><div class="value">${summary.total_findings}</div></div>
-      `;
+      stats.innerHTML = quickPassActive
+        ? `
+          <div class="stat"><div class="label">Hostname</div><div class="value">${escapeHtml(header.hostname || 'Unknown')}</div></div>
+          <div class="stat"><div class="label">Platform</div><div class="value">${escapeHtml(header.platform_detected || review?.vendor?.vendor || '-')}</div></div>
+          <div class="stat"><div class="label">Status</div><div class="value status ${review?.pass_fail ? 'pass' : 'fail'}">${review?.pass_fail ? 'PASS' : 'FAIL'}</div></div>
+          <div class="stat"><div class="label">${escapeHtml(findingsLabel)}</div><div class="value">${findingsValue}</div></div>
+        `
+        : `
+          <div class="stat"><div class="label">Status</div><div class="value status ${review?.pass_fail ? 'pass' : 'fail'}">${review?.pass_fail ? 'PASS' : 'FAIL'}</div></div>
+          <div class="stat"><div class="label">Risk score</div><div class="value">${review?.risk_score?.score ?? 0}</div></div>
+          <div class="stat"><div class="label">Grade</div><div class="value">${escapeHtml(review?.risk_score?.grade || '-')}</div></div>
+          <div class="stat"><div class="label">${escapeHtml(findingsLabel)}</div><div class="value">${findingsValue}</div></div>
+        `;
     }
 
     function renderReportHeader(report) {
@@ -1640,11 +1762,13 @@
       }
       panel.innerHTML = `
         <div class="finding ${review.pass_fail ? 'info' : 'critical'}">
-          <h4>Quick-pass result</h4>
-          <p><strong>${review.pass_fail ? 'Safe to push, based on criticals only.' : 'Not safe to push — critical findings detected.'}</strong></p>
+          <h4>Change-window quick pass</h4>
+          <p><strong>${review.pass_fail ? 'Safe to push, based on critical findings only.' : 'Not safe to push — critical findings detected.'}</strong></p>
+          <p class="history-meta">Quick-pass collapses the workspace to the red/green decision, hostname/platform, and a short critical list so an operator can answer “is this safe right now?” without wading through the full analyst view.</p>
           <ol class="list">
-            ${criticals.slice(0, 5).map(f => `<li>${escapeHtml(f.title)} (lines ${f.line_start}-${f.line_end})</li>`).join('') || '<li>No critical findings.</li>'}
+            ${criticals.slice(0, 5).map(f => `<li><strong>${escapeHtml(f.title)}</strong> · lines ${f.line_start}-${f.line_end}<br>${escapeHtml(f.description)}</li>`).join('') || '<li>No critical findings.</li>'}
           </ol>
+          ${criticals.length > 5 ? `<p class="history-meta">Showing the first 5 critical issues. Turn off quick-pass to see the full finding list and remediation detail.</p>` : '<p class="history-meta">Turn off quick-pass to reopen remediation, rollback, export, query, and config-navigation detail.</p>'}
         </div>
       `;
     }
@@ -2215,6 +2339,7 @@
       const payload = {
         config_text: configText,
         vendor: document.getElementById('vendor').value || null,
+        hostname: document.getElementById('hostnameOverride').value.trim() || null,
         quick_pass: document.getElementById('quickPass').checked,
         snippet_mode: document.getElementById('forceSnippet').checked ? true : null,
         context_hint: document.getElementById('contextHint').value || null,
@@ -2459,8 +2584,33 @@
       });
     }
 
-    function filterFindings(findings) {
-      const mode = document.getElementById('severityFilter').value;
+    function isQuickPassActive() {
+      return Boolean(document.getElementById('quickPass')?.checked);
+    }
+
+    function getSeverityFilterMode() {
+      if (isQuickPassActive()) return 'critical';
+      return document.getElementById('severityFilter')?.value || 'all';
+    }
+
+    function applyQuickPassUiMode(review = currentReview) {
+      if (QuickPassUi.applyQuickPassUiMode) {
+        return QuickPassUi.applyQuickPassUiMode(document, {
+          active: isQuickPassActive(),
+          hasReview: Boolean(review),
+        });
+      }
+      return { active: false };
+    }
+
+    function getSeverityFilterLabel(mode = getSeverityFilterMode()) {
+      if (mode === 'critical') return 'Critical only';
+      if (mode === 'warning') return 'Warning + critical';
+      if (mode === 'info') return 'Info only';
+      return 'All findings';
+    }
+
+    function filterFindings(findings = [], mode = getSeverityFilterMode()) {
       if (mode === 'all') return findings;
       if (mode === 'critical') return findings.filter(f => f.severity === 'critical');
       if (mode === 'warning') return findings.filter(f => ['critical', 'warning'].includes(f.severity));
@@ -2468,24 +2618,150 @@
       return findings;
     }
 
-    function setNavigatorFocus(startLine, endLine = startLine) {
+    function summarizeFindings(findings = []) {
+      return findings.reduce((summary, finding) => {
+        summary.total += 1;
+        if (finding.severity === 'critical') summary.critical += 1;
+        else if (finding.severity === 'warning') summary.warning += 1;
+        else summary.info += 1;
+        return summary;
+      }, { total: 0, critical: 0, warning: 0, info: 0 });
+    }
+
+    function getVisibleFindingSummary(findings = [], mode = getSeverityFilterMode()) {
+      return summarizeFindings(filterFindings(findings, mode));
+    }
+
+    function syncNavigatorSearchHighlights() {
+      const viewer = document.getElementById('configViewer');
+      if (!viewer) return;
+      const matchSet = new Set(currentNavigatorSearchState.matches || []);
+      const currentLine = currentNavigatorSearchState.currentIndex >= 0
+        ? currentNavigatorSearchState.matches[currentNavigatorSearchState.currentIndex]
+        : null;
+      viewer.querySelectorAll('.config-line').forEach(line => {
+        const lineNumber = Number(line.dataset.line);
+        line.classList.toggle('search-hit', matchSet.has(lineNumber));
+        line.classList.toggle('search-current', lineNumber === currentLine);
+      });
+    }
+
+    function updateNavigatorSearchStatus() {
+      const status = document.getElementById('configSearchStatus');
+      if (!status) return;
+      const term = String(currentNavigatorSearchState.term || '').trim();
+      if (!term) {
+        status.textContent = 'Search by interface, ACL, route-map, neighbor, IP, or jump straight to a line number.';
+        return;
+      }
+      if (!currentNavigatorSearchState.matches.length) {
+        status.textContent = `No matches for “${term}”.`;
+        return;
+      }
+      status.textContent = `${currentNavigatorSearchState.matches.length} match${currentNavigatorSearchState.matches.length === 1 ? '' : 'es'} for “${term}” · showing ${currentNavigatorSearchState.currentIndex + 1} of ${currentNavigatorSearchState.matches.length}.`;
+    }
+
+    function setNavigatorFocus(startLine, endLine = startLine, options = {}) {
       currentFocusRange = { startLine, endLine };
       const viewer = document.getElementById('configViewer');
       if (!viewer) return;
+      const { stateMessage = `Focused lines ${startLine}-${endLine} from the selected finding.`, behavior = 'smooth' } = options;
 
       viewer.querySelectorAll('.config-line').forEach(line => {
         const lineNumber = Number(line.dataset.line);
         line.classList.toggle('selected', lineNumber >= startLine && lineNumber <= endLine);
         line.classList.toggle('focus', lineNumber === startLine);
       });
+      syncNavigatorSearchHighlights();
 
       const anchor = viewer.querySelector(`.config-line[data-line="${startLine}"]`);
       if (anchor) {
-        anchor.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        anchor.scrollIntoView({ block: 'center', behavior });
       }
 
       const state = document.getElementById('navigatorState');
-      state.innerHTML = `<strong>Focused lines ${startLine}-${endLine}</strong> from the selected finding.`;
+      state.innerHTML = `<strong>${escapeHtml(stateMessage)}</strong>`;
+    }
+
+    function resetNavigatorSearchState() {
+      currentNavigatorSearchState = { term: '', matches: [], currentIndex: -1 };
+      const searchInput = document.getElementById('configSearchInput');
+      if (searchInput) searchInput.value = '';
+      const lineInput = document.getElementById('configLineJumpInput');
+      if (lineInput) lineInput.value = '';
+      syncNavigatorSearchHighlights();
+      updateNavigatorSearchStatus();
+    }
+
+    function focusNavigatorSearchMatch(index, options = {}) {
+      const matches = currentNavigatorSearchState.matches || [];
+      if (!matches.length) {
+        currentNavigatorSearchState.currentIndex = -1;
+        syncNavigatorSearchHighlights();
+        updateNavigatorSearchStatus();
+        return;
+      }
+      const normalizedIndex = ((index % matches.length) + matches.length) % matches.length;
+      currentNavigatorSearchState.currentIndex = normalizedIndex;
+      const lineNumber = matches[normalizedIndex];
+      syncNavigatorSearchHighlights();
+      updateNavigatorSearchStatus();
+      setNavigatorFocus(lineNumber, lineNumber, {
+        stateMessage: options.stateMessage || `Focused search match ${normalizedIndex + 1} of ${matches.length} at line ${lineNumber}.`,
+        behavior: options.behavior || 'smooth',
+      });
+    }
+
+    function runNavigatorSearch(term, options = {}) {
+      const viewer = document.getElementById('configViewer');
+      if (!viewer) return;
+      const normalizedTerm = String(term || '').trim().toLowerCase();
+      const lines = [...viewer.querySelectorAll('.config-line')];
+      if (!normalizedTerm) {
+        currentNavigatorSearchState = { term: '', matches: [], currentIndex: -1 };
+        syncNavigatorSearchHighlights();
+        updateNavigatorSearchStatus();
+        return;
+      }
+      const lineTexts = lines.map(line => line.querySelector('.config-line-text')?.textContent || line.textContent || '');
+      const matches = UiHelpers.getConfigSearchMatches
+        ? UiHelpers.getConfigSearchMatches(lineTexts, term)
+        : lines
+            .filter(line => String(line.textContent || '').toLowerCase().includes(normalizedTerm))
+            .map(line => Number(line.dataset.line));
+      currentNavigatorSearchState = {
+        term: term,
+        matches,
+        currentIndex: matches.length ? 0 : -1,
+      };
+      syncNavigatorSearchHighlights();
+      updateNavigatorSearchStatus();
+      if (matches.length) {
+        focusNavigatorSearchMatch(0, {
+          stateMessage: options.stateMessage || `Focused first search match for “${term}” at line ${matches[0]}.`,
+          behavior: options.behavior || 'smooth',
+        });
+      } else {
+        const state = document.getElementById('navigatorState');
+        if (state) {
+          state.innerHTML = `<strong>No config lines matched “${escapeHtml(term)}”.</strong>`;
+        }
+      }
+    }
+
+    function jumpToNavigatorLine(rawLine) {
+      const viewer = document.getElementById('configViewer');
+      if (!viewer) return;
+      const maxLine = viewer.querySelectorAll('.config-line').length;
+      const lineNumber = Number(rawLine);
+      if (!Number.isInteger(lineNumber) || lineNumber < 1 || lineNumber > maxLine) {
+        alert(`Enter a line number between 1 and ${maxLine}.`);
+        return;
+      }
+      setNavigatorFocus(lineNumber, lineNumber, {
+        stateMessage: `Jumped to line ${lineNumber}.`,
+        behavior: 'smooth',
+      });
     }
 
     async function copyTextToClipboard(text, successMessage) {
@@ -2504,16 +2780,25 @@
       if (!configText.trim()) {
         navigator.innerHTML = '';
         state.textContent = 'Run an analysis to load a line-numbered config view.';
+        currentNavigatorSearchState = { term: '', matches: [], currentIndex: -1 };
         return;
       }
 
-      state.innerHTML = `<strong>${lines.length} lines loaded.</strong> Click “Jump to config” on a finding to center that block.`;
+      state.innerHTML = `<strong>${lines.length} lines loaded.</strong> Click “Jump to config” on a finding, search for interface/ACL text, or jump straight to a line.`;
       navigator.innerHTML = `
         <div class="config-viewer-shell">
           <div class="config-viewer-toolbar">
             <div class="muted">Submitted config with line numbers</div>
-            <button id="copyConfigBtn" class="secondary-action">Copy full config</button>
+            <div class="finding-toolbar" style="margin-top:0; align-items:center;">
+              <input id="configSearchInput" placeholder="Search config text (Gi0/0, route-map, neighbor, VLAN 100)" style="min-width: 300px;" />
+              <button id="configSearchPrevBtn" class="secondary-action">Prev match</button>
+              <button id="configSearchNextBtn" class="secondary-action">Next match</button>
+              <input id="configLineJumpInput" type="number" min="1" max="${lines.length}" placeholder="Line #" style="width: 120px;" />
+              <button id="configJumpBtn" class="secondary-action">Jump to line</button>
+              <button id="copyConfigBtn" class="secondary-action">Copy full config</button>
+            </div>
           </div>
+          <div id="configSearchStatus" class="toolbar-note" style="padding: 0 14px 12px;">Search by interface, ACL, route-map, neighbor, IP, or jump straight to a line number.</div>
           <div id="configViewer" class="config-viewer">
             ${lines.map((line, index) => `
               <div class="config-line" data-line="${index + 1}">
@@ -2526,22 +2811,97 @@
       `;
 
       document.getElementById('copyConfigBtn').addEventListener('click', () => copyTextToClipboard(configText, 'Full config copied.'));
+      const searchInput = document.getElementById('configSearchInput');
+      const lineInput = document.getElementById('configLineJumpInput');
+      const searchButtonPrev = document.getElementById('configSearchPrevBtn');
+      const searchButtonNext = document.getElementById('configSearchNextBtn');
+      const jumpButton = document.getElementById('configJumpBtn');
+
+      searchInput?.addEventListener('input', () => {
+        runNavigatorSearch(searchInput.value);
+      });
+      searchInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (currentNavigatorSearchState.matches.length) {
+            focusNavigatorSearchMatch(currentNavigatorSearchState.currentIndex + 1);
+          } else {
+            runNavigatorSearch(searchInput.value);
+          }
+        }
+      });
+      searchButtonPrev?.addEventListener('click', () => {
+        if (!currentNavigatorSearchState.matches.length) {
+          runNavigatorSearch(searchInput?.value || '');
+          return;
+        }
+        focusNavigatorSearchMatch(currentNavigatorSearchState.currentIndex - 1, { stateMessage: `Focused previous search match at line ${currentNavigatorSearchState.matches[((currentNavigatorSearchState.currentIndex - 1) % currentNavigatorSearchState.matches.length + currentNavigatorSearchState.matches.length) % currentNavigatorSearchState.matches.length]}.` });
+      });
+      searchButtonNext?.addEventListener('click', () => {
+        if (!currentNavigatorSearchState.matches.length) {
+          runNavigatorSearch(searchInput?.value || '');
+          return;
+        }
+        focusNavigatorSearchMatch(currentNavigatorSearchState.currentIndex + 1, { stateMessage: `Focused next search match at line ${currentNavigatorSearchState.matches[(currentNavigatorSearchState.currentIndex + 1) % currentNavigatorSearchState.matches.length]}.` });
+      });
+      lineInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          jumpToNavigatorLine(lineInput.value);
+        }
+      });
+      jumpButton?.addEventListener('click', () => jumpToNavigatorLine(lineInput?.value));
+
+      const priorSearch = String(currentNavigatorSearchState.term || '');
+      if (priorSearch) {
+        searchInput.value = priorSearch;
+        runNavigatorSearch(priorSearch, { stateMessage: `Restored search for “${priorSearch}”.`, behavior: 'auto' });
+      } else {
+        updateNavigatorSearchStatus();
+      }
       if (currentFocusRange) {
-        setNavigatorFocus(currentFocusRange.startLine, currentFocusRange.endLine);
+        setNavigatorFocus(currentFocusRange.startLine, currentFocusRange.endLine, { behavior: 'auto' });
       }
     }
 
     function renderFindings(findings) {
       const list = document.getElementById('findingsList');
-      const filtered = filterFindings(findings).map((finding, reviewIndex) => ({
+      const mode = getSeverityFilterMode();
+      const quickPassActive = isQuickPassActive();
+      const totalSummary = summarizeFindings(findings || []);
+      const visibleSummary = getVisibleFindingSummary(findings || [], mode);
+      const hiddenCount = Math.max(totalSummary.total - visibleSummary.total, 0);
+      const filtered = filterFindings(findings || [], mode).map((finding, reviewIndex) => ({
         finding,
         reviewIndex,
       }));
       if (!filtered.length) {
-        list.innerHTML = '<div class="muted">No findings match the current filter.</div>';
+        list.innerHTML = `
+          <div class="finding warning">
+            <h4>No findings match the current threshold</h4>
+            <p><strong>Current threshold:</strong> ${escapeHtml(getSeverityFilterLabel(mode))}</p>
+            <p><strong>Hidden findings:</strong> ${hiddenCount} of ${totalSummary.total} total.</p>
+            <p class="history-meta">Switch the severity view back to All findings when you need the lower-severity detail again.</p>
+          </div>
+        `;
         return;
       }
-      list.innerHTML = filtered.map(({ finding: f, reviewIndex }) => `
+      const thresholdBanner = quickPassActive ? `
+        <div class="finding info">
+          <h4>Quick-pass filter in effect</h4>
+          <p><strong>Critical only</strong> is active for this review.</p>
+          <p><strong>Visible now:</strong> ${visibleSummary.critical} critical finding${visibleSummary.critical === 1 ? '' : 's'}.</p>
+          <p><strong>Suppressed:</strong> ${hiddenCount} warning/info finding${hiddenCount === 1 ? '' : 's'} hidden until you turn quick-pass off.</p>
+        </div>
+      ` : mode === 'all' ? '' : `
+        <div class="finding info">
+          <h4>Operator threshold in effect</h4>
+          <p><strong>${escapeHtml(getSeverityFilterLabel(mode))}</strong> is active for this session.</p>
+          <p><strong>Visible now:</strong> ${visibleSummary.total} finding${visibleSummary.total === 1 ? '' : 's'} · ${visibleSummary.critical} critical · ${visibleSummary.warning} warning · ${visibleSummary.info} info</p>
+          <p><strong>Hidden:</strong> ${hiddenCount} lower-severity finding${hiddenCount === 1 ? '' : 's'} outside the current threshold.</p>
+        </div>
+      `;
+      list.innerHTML = thresholdBanner + filtered.map(({ finding: f, reviewIndex }) => `
         <div class="finding ${f.severity}">
           <h4>${escapeHtml(f.title)} <span class="badge ${f.severity}">${escapeHtml(f.severity)}</span></h4>
           <p><strong>Category:</strong> ${escapeHtml(f.category)} · <strong>Lines:</strong> ${f.line_start}-${f.line_end}</p>
@@ -2610,6 +2970,7 @@
       const payload = {
         config_text: document.getElementById('configText').value,
         vendor: document.getElementById('vendor').value || null,
+        hostname: document.getElementById('hostnameOverride').value.trim() || null,
         quick_pass: document.getElementById('quickPass').checked,
         snippet_mode: document.getElementById('forceSnippet').checked ? true : null,
         context_hint: document.getElementById('contextHint').value || null,
@@ -2631,12 +2992,13 @@
       const data = await res.json();
       currentReview = data;
       hydrateWorklistState(data);
+      applyQuickPassUiMode(data);
       document.getElementById('summaryState').innerHTML = `
         <strong>Review complete.</strong><br>
         ${escapeHtml(data.risk_score.benchmark_label)}<br>
         Config hash: <code>${escapeHtml(data.config_hash.slice(0, 16))}...</code>
       `;
-      renderStats(data.summary, data.risk_score, data.pass_fail);
+      renderStats(data);
       renderReportHeader(data.report);
       renderQuickPassPanel(data);
       renderTemplateCompliance(data.report);
@@ -2691,13 +3053,15 @@
       if (review.vendor?.vendor && review.vendor.vendor !== 'unknown') {
         document.getElementById('vendor').value = review.vendor.vendor;
       }
+      document.getElementById('hostnameOverride').value = '';
       hydrateWorklistState(review);
+      applyQuickPassUiMode(review);
       document.getElementById('summaryState').innerHTML = `
         <strong>Review loaded into workspace.</strong><br>
         ${escapeHtml(review.risk_score.benchmark_label)}<br>
         Config hash: <code>${escapeHtml(review.config_hash.slice(0, 16))}...</code>
       `;
-      renderStats(review.summary, review.risk_score, review.pass_fail);
+      renderStats(review);
       renderReportHeader(review.report);
       renderQuickPassPanel(review);
       renderTemplateCompliance(review.report);
@@ -2721,9 +3085,27 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function getBatchPriorityScore(item) {
+    function getReviewQueueMetrics(review, mode = getSeverityFilterMode()) {
+      const visibleSummary = getVisibleFindingSummary(review?.findings || [], mode);
+      const totalSummary = summarizeFindings(review?.findings || []);
+      return {
+        visibleSummary,
+        totalSummary,
+        hiddenCount: Math.max(totalSummary.total - visibleSummary.total, 0),
+      };
+    }
+
+    function getBatchPriorityScore(item, mode = getSeverityFilterMode()) {
       const review = item.review;
-      return (review.summary.critical_count * 1000) + (review.summary.warning_count * 100) + review.risk_score.score;
+      if (mode === 'all') {
+        return (review.summary.critical_count * 1000) + (review.summary.warning_count * 100) + review.risk_score.score;
+      }
+      const metrics = getReviewQueueMetrics(review, mode);
+      return (metrics.visibleSummary.critical * 1000)
+        + (metrics.visibleSummary.warning * 100)
+        + (metrics.visibleSummary.info * 10)
+        + metrics.visibleSummary.total
+        + ((review.risk_score?.score || 0) / 1000);
     }
 
     function getBatchQueueState(target = document.getElementById('batchReviewResults')) {
@@ -2733,40 +3115,92 @@
       };
     }
 
+    function getBatchQueueReviewContext(item, severityMode = getSeverityFilterMode(), batchProgress = getBatchProgressState()) {
+      const reviewId = item?.review?.review_id;
+      const progress = batchProgress[reviewId] || {};
+      const latestExport = reviewId ? getReviewExportHistory(reviewId)[0] : null;
+      const hasExportIssue = UiHelpers.hasExportIssue
+        ? UiHelpers.hasExportIssue(latestExport?.exportStatus)
+        : Boolean(latestExport && !['success', 'unknown'].includes(latestExport.exportStatus));
+      const metrics = getReviewQueueMetrics(item?.review, severityMode);
+      const hasVisibleThresholdFindings = metrics.visibleSummary.total > 0;
+      const actionableNow = UiHelpers.getBatchQueueActionability
+        ? UiHelpers.getBatchQueueActionability({
+            progressDone: Boolean(progress.done),
+            visibleFindingCount: metrics.visibleSummary.total,
+            latestExportStatus: latestExport?.exportStatus || null,
+          })
+        : Boolean(!progress.done && (hasVisibleThresholdFindings || hasExportIssue));
+      return {
+        progress,
+        latestExport,
+        hasExportIssue,
+        metrics,
+        hasVisibleThresholdFindings,
+        actionableNow,
+        handoffReady: UiHelpers.getBatchQueueHandoffReadiness
+          ? UiHelpers.getBatchQueueHandoffReadiness({
+              progressDone: Boolean(progress.done),
+              exported: Boolean(progress.exported),
+              visibleFindingCount: metrics.visibleSummary.total,
+              latestExportStatus: latestExport?.exportStatus || null,
+            })
+          : Boolean(!progress.done && !progress.exported && !hasVisibleThresholdFindings && !hasExportIssue),
+      };
+    }
+
     function getVisibleBatchQueueItems(data = currentBatchReview) {
       if (!data?.reviews?.length) return [];
       const batchProgress = getBatchProgressState();
-      const orderedReviews = [...(data.reviews || [])].sort((a, b) => getBatchPriorityScore(b) - getBatchPriorityScore(a));
+      const severityMode = getSeverityFilterMode();
+      const orderedReviews = [...(data.reviews || [])].sort((a, b) => getBatchPriorityScore(b, severityMode) - getBatchPriorityScore(a, severityMode));
       const queueState = getBatchQueueState();
       return orderedReviews.filter(item => {
-        const progress = batchProgress[item.review.review_id] || {};
-        const latestExport = getReviewExportHistory(item.review.review_id)[0];
-        const hasExportIssue = Boolean(latestExport && !['success', 'unknown'].includes(latestExport.exportStatus));
-        const matchesFilter = (() => {
-          if (queueState.filter === 'critical') return item.review.summary.critical_count > 0;
-          if (queueState.filter === 'failing') return !item.review.pass_fail;
-          if (queueState.filter === 'pending') return !progress.done;
-          if (queueState.filter === 'export-issues') return hasExportIssue;
-          if (queueState.filter === 'exported') return Boolean(progress.exported);
-          if (queueState.filter === 'done') return Boolean(progress.done);
-          if (queueState.filter === 'pass-only') return item.review.pass_fail;
-          if (queueState.filter === 'attention') {
-            return item.review.summary.critical_count > 0 || !item.review.pass_fail || !progress.done || hasExportIssue;
-          }
-          return true;
-        })();
+        const context = getBatchQueueReviewContext(item, severityMode, batchProgress);
+        const matchesFilter = UiHelpers.matchesBatchQueueFilter
+          ? UiHelpers.matchesBatchQueueFilter(queueState.filter, {
+              passFail: item.review.pass_fail,
+              progressDone: Boolean(context.progress.done),
+              exported: Boolean(context.progress.exported),
+              visibleSummary: context.metrics.visibleSummary,
+              latestExportStatus: context.latestExport?.exportStatus || null,
+            })
+          : (() => {
+              if (queueState.filter === 'critical') return context.metrics.visibleSummary.critical > 0;
+              if (queueState.filter === 'failing') return !item.review.pass_fail && context.metrics.visibleSummary.total > 0;
+              if (queueState.filter === 'pending') return !context.progress.done;
+              if (queueState.filter === 'ready') return context.handoffReady;
+              if (queueState.filter === 'export-issues') return context.hasExportIssue;
+              if (queueState.filter === 'exported') return Boolean(context.progress.exported);
+              if (queueState.filter === 'done') return Boolean(context.progress.done);
+              if (queueState.filter === 'pass-only') return item.review.pass_fail;
+              if (queueState.filter === 'attention') {
+                return context.actionableNow;
+              }
+              return true;
+            })();
         if (!matchesFilter) return false;
         if (!queueState.search) return true;
         const review = item.review;
-        const searchCorpus = [
-          item.filename,
-          review.report?.header?.hostname,
-          review.vendor?.vendor,
-          review.vendor?.os_version,
-          latestExport?.target,
-          latestExport?.destination,
-          ...(review.findings || []).slice(0, 5).map(finding => finding.title),
-        ].filter(Boolean).join(' ').toLowerCase();
+        const searchCorpus = UiHelpers.buildBatchQueueSearchCorpus
+          ? UiHelpers.buildBatchQueueSearchCorpus({
+              filename: item.filename,
+              hostname: review.report?.header?.hostname,
+              vendor: review.vendor?.vendor,
+              osVersion: review.vendor?.os_version,
+              latestExportTarget: context.latestExport?.target,
+              latestExportDestination: context.latestExport?.destination,
+              findingTitles: (review.findings || []).slice(0, 5).map(finding => finding.title),
+            })
+          : [
+              item.filename,
+              review.report?.header?.hostname,
+              review.vendor?.vendor,
+              review.vendor?.os_version,
+              context.latestExport?.target,
+              context.latestExport?.destination,
+              ...(review.findings || []).slice(0, 5).map(finding => finding.title),
+            ].filter(Boolean).join(' ').toLowerCase();
         return searchCorpus.includes(queueState.search);
       });
     }
@@ -2844,7 +3278,8 @@
       const batchProgress = getBatchProgressState();
       const currentExportPrefs = getExportPrefs();
       const currentExportReadiness = getExportReadiness(currentExportPrefs);
-      const orderedReviews = [...(data.reviews || [])].sort((a, b) => getBatchPriorityScore(b) - getBatchPriorityScore(a));
+      const severityMode = getSeverityFilterMode();
+      const orderedReviews = [...(data.reviews || [])].sort((a, b) => getBatchPriorityScore(b, severityMode) - getBatchPriorityScore(a, severityMode));
       const queueState = getBatchQueueState(target);
       const existingFilter = queueState.filter;
       const existingSearch = queueState.search;
@@ -2858,18 +3293,17 @@
         return latestExport && !['success', 'unknown'].includes(latestExport.exportStatus);
       });
       const matchesBatchQueueFilter = (item) => {
-        const progress = batchProgress[item.review.review_id] || {};
-        const latestExport = getReviewExportHistory(item.review.review_id)[0];
-        const hasExportIssue = Boolean(latestExport && !['success', 'unknown'].includes(latestExport.exportStatus));
-        if (existingFilter === 'critical') return item.review.summary.critical_count > 0;
-        if (existingFilter === 'failing') return !item.review.pass_fail;
-        if (existingFilter === 'pending') return !progress.done;
-        if (existingFilter === 'export-issues') return hasExportIssue;
-        if (existingFilter === 'exported') return Boolean(progress.exported);
-        if (existingFilter === 'done') return Boolean(progress.done);
+        const context = getBatchQueueReviewContext(item, severityMode, batchProgress);
+        if (existingFilter === 'critical') return context.metrics.visibleSummary.critical > 0;
+        if (existingFilter === 'failing') return !item.review.pass_fail && context.metrics.visibleSummary.total > 0;
+        if (existingFilter === 'pending') return !context.progress.done;
+        if (existingFilter === 'ready') return context.handoffReady;
+        if (existingFilter === 'export-issues') return context.hasExportIssue;
+        if (existingFilter === 'exported') return Boolean(context.progress.exported);
+        if (existingFilter === 'done') return Boolean(context.progress.done);
         if (existingFilter === 'pass-only') return item.review.pass_fail;
         if (existingFilter === 'attention') {
-          return item.review.summary.critical_count > 0 || !item.review.pass_fail || !progress.done || hasExportIssue;
+          return context.actionableNow;
         }
         return true;
       };
@@ -2889,9 +3323,16 @@
         return searchCorpus.includes(existingSearch);
       };
       const filteredReviews = orderedReviews.filter(item => matchesBatchQueueFilter(item) && matchesBatchQueueSearch(item));
-      const filteredCriticalItems = filteredReviews.filter(item => item.review.summary.critical_count > 0);
-      const filteredFailingItems = filteredReviews.filter(item => !item.review.pass_fail);
+      const filteredReviewsWithMetrics = filteredReviews.map(item => {
+        const context = getBatchQueueReviewContext(item, severityMode, batchProgress);
+        return { item, metrics: context.metrics, context };
+      });
+      const actionableItems = filteredReviewsWithMetrics.filter(entry => entry.context.actionableNow).map(entry => entry.item);
+      const filteredVisibleFindingItems = filteredReviewsWithMetrics.filter(entry => entry.metrics.visibleSummary.total > 0).map(entry => entry.item);
+      const filteredCriticalItems = filteredReviewsWithMetrics.filter(entry => entry.metrics.visibleSummary.critical > 0).map(entry => entry.item);
+      const filteredFailingItems = filteredReviewsWithMetrics.filter(entry => !entry.item.review.pass_fail && entry.metrics.visibleSummary.total > 0).map(entry => entry.item);
       const filteredPendingItems = filteredReviews.filter(item => !(batchProgress[item.review.review_id] || {}).done);
+      const filteredReadyItems = filteredReviewsWithMetrics.filter(entry => entry.context.handoffReady).map(entry => entry.item);
       const filteredFailedExportItems = filteredReviews.filter(item => {
         const latestExport = getReviewExportHistory(item.review.review_id)[0];
         return latestExport && !['success', 'unknown'].includes(latestExport.exportStatus);
@@ -2899,20 +3340,26 @@
       const filteredCriticalCount = filteredCriticalItems.length;
       const filteredFailingCount = filteredFailingItems.length;
       const filteredPendingCount = filteredPendingItems.length;
+      const filteredReadyCount = filteredReadyItems.length;
       const filteredExportIssueCount = filteredFailedExportItems.length;
-      const filteredHighestRiskItem = filteredReviews[0] || null;
+      const filteredHighestRiskItem = actionableItems[0] || filteredVisibleFindingItems[0] || filteredReviews[0] || null;
+      const filteredVisibleCount = filteredVisibleFindingItems.length;
+      const actionableCount = actionableItems.length;
       const reviewCards = filteredReviews.map(item => {
         const review = item.review;
         const progress = batchProgress[review.review_id] || {};
         const exportHistory = getReviewExportHistory(review.review_id);
         const latestExport = exportHistory[0];
         const exportHistoryHtml = renderExportHistoryList(review.review_id);
+        const queueMetrics = getReviewQueueMetrics(review, severityMode);
+        const previewFindings = filterFindings(review.findings || [], severityMode);
         const latestExportAlignmentBadge = latestExport
           ? buildDestinationAlignmentBadge(latestExport, currentExportPrefs, { matchLabel: 'latest export matches current target', staleLabel: 'latest export is stale vs current target' })
           : '';
         const statusPills = [
           currentReview?.review_id === review.review_id ? '<span class="mini-pill">loaded in workspace</span>' : '',
           progress.opened ? '<span class="mini-pill">opened</span>' : '',
+          queueMetrics.visibleSummary.total === 0 && !progress.done && !progress.exported && !(latestExport && !['success', 'unknown'].includes(latestExport.exportStatus)) ? '<span class="mini-pill">ready to hand off</span>' : '',
           progress.exported ? `<span class="mini-pill">exported${progress.exportTarget ? ` to ${escapeHtml(progress.exportTarget)}` : ''}</span>` : '',
           progress.done ? '<span class="mini-pill">handoff done</span>' : '',
           latestExportAlignmentBadge,
@@ -2937,11 +3384,12 @@
             <p><strong>${review.pass_fail ? 'PASS' : 'FAIL'}</strong> · ${escapeHtml(review.vendor.vendor)}${review.vendor.os_version ? ` ${escapeHtml(review.vendor.os_version)}` : ''}</p>
             <p><strong>Hostname:</strong> ${escapeHtml(review.report.header.hostname || 'Unknown')} · <strong>Risk:</strong> ${review.risk_score.score} (${escapeHtml(review.risk_score.grade)})</p>
             <p><strong>Findings:</strong> ${review.summary.total_findings} total · ${review.summary.critical_count} critical · ${review.summary.warning_count} warning · ${review.summary.info_count} info</p>
+            ${severityMode === 'all' ? '' : `<p class="history-meta"><strong>Visible under ${escapeHtml(getSeverityFilterLabel(severityMode))}:</strong> ${queueMetrics.visibleSummary.total} finding${queueMetrics.visibleSummary.total === 1 ? '' : 's'} · ${queueMetrics.visibleSummary.critical} critical · ${queueMetrics.visibleSummary.warning} warning · ${queueMetrics.hiddenCount} hidden outside threshold</p>`}
             ${statusPills ? `<p><strong>Change-window status:</strong> ${statusPills}</p>` : '<p><strong>Change-window status:</strong> not opened yet</p>'}
             ${progress.updatedAt ? `<p class="history-meta">Last action: ${escapeHtml(progress.lastAction || 'updated')} · ${escapeHtml(progress.updatedAt)}</p>` : ''}
             ${latestExport ? `<p class="history-meta"><strong>Latest export:</strong> ${escapeHtml(latestExport.target)} · ${escapeHtml(latestExport.destination)} · ${escapeHtml(latestExport.exportStatus)} · ${escapeHtml(latestExport.timestamp)}</p><p class="history-meta">${escapeHtml(buildDestinationAlignmentNote(latestExport, currentExportPrefs, { prefix: 'Latest export' }))}</p>` : '<p class="history-meta">Latest export: none yet in this browser session.</p>'}
             ${latestExportFailurePanel}
-            ${(review.findings || []).slice(0, 3).length ? `<ul>${review.findings.slice(0, 3).map(finding => `<li>${escapeHtml(finding.title)} (lines ${finding.line_start}-${finding.line_end})</li>`).join('')}</ul>` : '<p>No findings.</p>'}
+            ${previewFindings.slice(0, 3).length ? `<ul>${previewFindings.slice(0, 3).map(finding => `<li>${escapeHtml(finding.title)} (lines ${finding.line_start}-${finding.line_end})</li>`).join('')}</ul>` : severityMode === 'all' ? '<p>No findings.</p>' : `<p class="history-meta">No findings are visible under ${escapeHtml(getSeverityFilterLabel(severityMode))}.</p>`}
             <details style="margin-top:10px;">
               <summary>Export history (${exportHistory.length})</summary>
               ${exportHistoryHtml}
@@ -2991,52 +3439,167 @@
         <div class="finding ${criticalItems.length ? 'critical' : failingItems.length ? 'warning' : 'info'}" style="margin-top:12px;">
           <h4>Operator triage queue</h4>
           <p><strong>${criticalItems.length}</strong> device${criticalItems.length === 1 ? '' : 's'} with critical findings · <strong>${failingItems.length}</strong> failing review${failingItems.length === 1 ? '' : 's'} total.</p>
-          <p>The list below is automatically sorted by risk so the worst devices land at the top first.</p>
+          <p>The list below is automatically sorted by ${severityMode === 'all' ? 'risk' : `${getSeverityFilterLabel(severityMode).toLowerCase()} signal first, then overall risk`} so the most relevant devices land at the top for the current change-window posture.</p>
           <p><strong>Current handoff target:</strong> ${escapeHtml(getExportTargetLabelFromPrefs(currentExportPrefs))} · ${escapeHtml(getExportDestinationLabelFromPrefs(currentExportPrefs))}</p>
           <p><strong>Current target readiness:</strong> ${currentExportReadiness.ready ? 'ready to export' : 'missing required setup'}${currentExportReadiness.missing.length ? ` · ${escapeHtml(currentExportReadiness.missing[0])}` : ''}</p>
           <p><strong>Reusable last successful handoff:</strong> ${latestSuccessfulExport ? `${escapeHtml(latestSuccessfulExport.target)} · ${escapeHtml(latestSuccessfulExport.destination)} · ${escapeHtml(latestSuccessfulExport.timestamp)}` : 'none yet in this browser session'}</p>
           ${latestSuccessfulExport ? `<p class="history-meta">${escapeHtml(buildDestinationAlignmentNote(latestSuccessfulExport, currentExportPrefs, { prefix: 'Reusable handoff' }))}</p>` : ''}
           <p><strong>Handoff state:</strong> ${pendingItems.length} pending · ${orderedReviews.filter(item => batchProgress[item.review.review_id]?.exported).length} exported · ${orderedReviews.filter(item => batchProgress[item.review.review_id]?.done).length} marked done · ${failedExportItems.length} with export issues</p>
-          <div class="row" style="margin-top:12px;">
-            <label>
-              <span class="muted">Queue filter</span>
-              <select id="batchQueueFilter">
-                <option value="attention" ${existingFilter === 'attention' ? 'selected' : ''}>Needs attention</option>
-                <option value="all" ${existingFilter === 'all' ? 'selected' : ''}>All reviews</option>
-                <option value="critical" ${existingFilter === 'critical' ? 'selected' : ''}>Critical findings</option>
-                <option value="failing" ${existingFilter === 'failing' ? 'selected' : ''}>Failing reviews</option>
-                <option value="pending" ${existingFilter === 'pending' ? 'selected' : ''}>Pending handoff</option>
-                <option value="export-issues" ${existingFilter === 'export-issues' ? 'selected' : ''}>Export issues</option>
-                <option value="exported" ${existingFilter === 'exported' ? 'selected' : ''}>Already exported</option>
-                <option value="done" ${existingFilter === 'done' ? 'selected' : ''}>Marked done</option>
-                <option value="pass-only" ${existingFilter === 'pass-only' ? 'selected' : ''}>Pass-only reviews</option>
-              </select>
-            </label>
-            <label>
-              <span class="muted">Search by filename, hostname, vendor, finding, or destination</span>
-              <input id="batchQueueSearch" value="${escapeHtml(existingSearch)}" placeholder="e.g. edge-a, NET-123, branch-r1, ospf" />
-            </label>
-          </div>
-          <p><strong>Visible queue:</strong> ${filteredReviews.length} of ${orderedReviews.length} review${orderedReviews.length === 1 ? '' : 's'} · ${filteredCriticalCount} critical · ${filteredFailingCount} failing · ${filteredPendingCount} pending · ${filteredExportIssueCount} with export issues</p>
-          <p class="history-meta">Queue quick actions below now follow the current filter/search, so “next pending” and similar actions only touch what you can actually see in the visible slice.</p>
-          <div class="finding-toolbar">
-            <button class="secondary-action" id="batchOpenWorstBtn" ${filteredHighestRiskItem ? '' : 'disabled'}>Open highest-risk visible review</button>
-            <button class="secondary-action" id="batchOpenFirstFailBtn" ${filteredFailingItems.length ? '' : 'disabled'}>Open first visible failing review</button>
-            <button class="secondary-action" id="batchOpenFirstCriticalBtn" ${filteredCriticalItems.length ? '' : 'disabled'}>Open first visible critical review</button>
-            <button class="secondary-action" id="batchOpenNextPendingBtn" ${filteredPendingItems.length ? '' : 'disabled'}>Open next visible pending handoff</button>
-            <button class="secondary-action" id="batchExportNextPendingBtn" ${(filteredPendingItems.length && currentExportReadiness.ready) ? '' : 'disabled'}>Export next visible pending to ${escapeHtml(currentExportReadiness.targetLabel)}</button>
-            <button class="secondary-action" id="batchDuplicateNextPendingBtn" ${(filteredPendingItems.length && latestSuccessfulExport) ? '' : 'disabled'}>Duplicate last successful handoff to next visible pending</button>
-            <button class="secondary-action" id="batchRetryFirstFailedExportBtn" ${filteredFailedExportItems.length ? '' : 'disabled'}>Retry first visible failed export</button>
-            <button class="secondary-action" id="batchCopyFirstFailSummaryBtn" ${filteredFailingItems.length ? '' : 'disabled'}>Copy first visible failing summary</button>
-            <button class="secondary-action" id="batchCopyFirstFallbackBtn" ${(filteredFailedExportItems.length || filteredFailingItems.length) ? '' : 'disabled'}>Copy first visible manual fallback</button>
-            <button class="secondary-action" id="batchDownloadFirstFallbackBtn" ${(filteredFailedExportItems.length || filteredFailingItems.length) ? '' : 'disabled'}>Download first visible fallback bundle</button>
-          </div>
+          ${(BatchQueueUi.buildBatchQueueControlsMarkup ? BatchQueueUi.buildBatchQueueControlsMarkup({
+            existingFilter,
+            existingSearch,
+            orderedReviewCount: orderedReviews.length,
+            filteredReviewCount: filteredReviews.length,
+            filteredCriticalCount,
+            filteredFailingCount,
+            filteredPendingCount,
+            filteredReadyCount,
+            filteredExportIssueCount,
+            filteredVisibleCount,
+            actionableCount,
+            severityLabel: getSeverityFilterLabel(severityMode),
+            severityMode,
+            currentTargetLabel: currentExportReadiness.targetLabel,
+            disableOpenHighestRisk: !filteredHighestRiskItem,
+            disableOpenFirstFail: !filteredFailingItems.length,
+            disableOpenFirstCritical: !filteredCriticalItems.length,
+            disableOpenNextPending: !filteredPendingItems.length,
+            disableOpenFirstReady: !filteredReadyItems.length,
+            disableExportNextPending: !(filteredPendingItems.length && currentExportReadiness.ready),
+            disableExportFirstReady: !(filteredReadyItems.length && currentExportReadiness.ready),
+            disableDuplicateNextPending: !(filteredPendingItems.length && latestSuccessfulExport),
+            disableRetryFirstFailedExport: !filteredFailedExportItems.length,
+            disableCopyFirstFailSummary: !filteredFailingItems.length,
+            disableCopyFirstFallback: !(filteredFailedExportItems.length || filteredFailingItems.length),
+            disableDownloadFirstFallback: !(filteredFailedExportItems.length || filteredFailingItems.length),
+          }) : '')}
         </div>
         <div style="margin-top:12px;">${crossConfig}${reviewCards || '<div class="muted">No reviews match the current queue filter/search.</div>'}</div>
       `;
 
-      target.querySelector('#batchQueueFilter')?.addEventListener('change', () => renderBatchReviewResults(currentBatchReview));
-      target.querySelector('#batchQueueSearch')?.addEventListener('input', () => renderBatchReviewResults(currentBatchReview));
+      if (BatchQueueUi.wireBatchQueueControls) {
+        BatchQueueUi.wireBatchQueueControls(target, {
+          onFilterChange: () => renderBatchReviewResults(currentBatchReview),
+          onSearchInput: () => renderBatchReviewResults(currentBatchReview),
+          onOpenHighestRisk: () => {
+            const item = filteredHighestRiskItem;
+            if (!item) return;
+            loadReviewIntoWorkspace(item.review, item.config_text || '');
+          },
+          onOpenFirstFailing: () => {
+            const item = filteredFailingItems[0];
+            if (!item) return;
+            loadReviewIntoWorkspace(item.review, item.config_text || '');
+          },
+          onOpenFirstCritical: () => {
+            const item = filteredCriticalItems[0];
+            if (!item) return;
+            loadReviewIntoWorkspace(item.review, item.config_text || '');
+          },
+          onOpenNextPending: () => {
+            const item = filteredPendingItems[0];
+            if (!item) return;
+            loadReviewIntoWorkspace(item.review, item.config_text || '');
+          },
+          onOpenFirstReady: () => {
+            const item = filteredReadyItems[0];
+            if (!item) return;
+            loadReviewIntoWorkspace(item.review, item.config_text || '');
+          },
+          onExportNextPending: async () => {
+            const item = filteredPendingItems[0];
+            if (!item) return;
+            const button = document.getElementById('batchExportNextPendingBtn');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Exporting...';
+            try {
+              await exportBatchReviewItemToITSM(item, null, { renderPanel: currentReview?.review_id === item.review.review_id, successMessage: 'Next visible pending review exported to the current ITSM target.' });
+            } catch (err) {
+              alert(err.message);
+            } finally {
+              button.disabled = false;
+              button.textContent = originalText;
+            }
+          },
+          onExportFirstReady: async () => {
+            const item = filteredReadyItems[0];
+            if (!item) return;
+            const button = document.getElementById('batchExportFirstReadyBtn');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Exporting...';
+            try {
+              await exportBatchReviewItemToITSM(item, null, { renderPanel: currentReview?.review_id === item.review.review_id, successMessage: 'First visible handoff-ready review exported to the current ITSM target.' });
+            } catch (err) {
+              alert(err.message);
+            } finally {
+              button.disabled = false;
+              button.textContent = originalText;
+            }
+          },
+          onDuplicateNextPending: async () => {
+            const item = filteredPendingItems[0];
+            const latestReusable = findLatestSuccessfulExportEntry(batchReviewIds);
+            if (!item || !latestReusable?.reusablePrefs) return;
+            const button = document.getElementById('batchDuplicateNextPendingBtn');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Duplicating...';
+            try {
+              await exportBatchReviewItemToITSM(item, null, {
+                renderPanel: currentReview?.review_id === item.review.review_id,
+                successMessage: `Duplicated ${latestReusable.target} handoff onto the next visible pending review.`,
+                exportPrefsOverride: latestReusable.reusablePrefs,
+              });
+            } catch (err) {
+              alert(err.message);
+            } finally {
+              button.disabled = false;
+              button.textContent = originalText;
+            }
+          },
+          onRetryFirstFailedExport: async () => {
+            const item = filteredFailedExportItems[0];
+            if (!item) return;
+            const button = document.getElementById('batchRetryFirstFailedExportBtn');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Retrying...';
+            try {
+              await exportBatchReviewItemToITSM(item, null, { renderPanel: currentReview?.review_id === item.review.review_id, successMessage: 'Retried the first visible failed export with the current target details.' });
+            } catch (err) {
+              alert(err.message);
+            } finally {
+              button.disabled = false;
+              button.textContent = originalText;
+            }
+          },
+          onCopyFirstFailSummary: async () => {
+            const item = filteredFailingItems[0] || filteredCriticalItems[0];
+            if (!item) return;
+            updateBatchProgress(item.review.review_id, { lastAction: 'copied first visible failing summary' });
+            await copyTextToClipboard(buildExportSummaryText(item.review), 'First visible failing handoff summary copied.');
+            renderBatchReviewResults(currentBatchReview);
+          },
+          onCopyFirstFallback: async () => {
+            const item = filteredFailedExportItems[0] || filteredFailingItems[0] || filteredCriticalItems[0];
+            if (!item) return;
+            const latestExport = getReviewExportHistory(item.review.review_id)[0] || null;
+            updateBatchProgress(item.review.review_id, { lastAction: 'copied first visible manual fallback package' });
+            await copyTextToClipboard(buildManualFallbackText(item.review, latestExport), 'First visible manual fallback package copied.');
+            renderBatchReviewResults(currentBatchReview);
+          },
+          onDownloadFirstFallback: () => {
+            const item = filteredFailedExportItems[0] || filteredFailingItems[0] || filteredCriticalItems[0];
+            if (!item) return;
+            const latestExport = getReviewExportHistory(item.review.review_id)[0] || null;
+            updateBatchProgress(item.review.review_id, { lastAction: 'downloaded first visible fallback bundle' });
+            downloadManualFallbackBundle(item.review, latestExport);
+            renderBatchReviewResults(currentBatchReview);
+          },
+        });
+      }
       renderBatchWorkspaceNavigator();
 
       target.querySelectorAll('[data-batch-open-review-id]').forEach(button => {
@@ -3135,102 +3698,6 @@
         });
       });
 
-      document.getElementById('batchOpenWorstBtn')?.addEventListener('click', () => {
-        const item = filteredHighestRiskItem;
-        if (!item) return;
-        loadReviewIntoWorkspace(item.review, item.config_text || '');
-      });
-      document.getElementById('batchOpenFirstFailBtn')?.addEventListener('click', () => {
-        const item = filteredFailingItems[0];
-        if (!item) return;
-        loadReviewIntoWorkspace(item.review, item.config_text || '');
-      });
-      document.getElementById('batchOpenFirstCriticalBtn')?.addEventListener('click', () => {
-        const item = filteredCriticalItems[0];
-        if (!item) return;
-        loadReviewIntoWorkspace(item.review, item.config_text || '');
-      });
-      document.getElementById('batchOpenNextPendingBtn')?.addEventListener('click', () => {
-        const item = filteredPendingItems[0];
-        if (!item) return;
-        loadReviewIntoWorkspace(item.review, item.config_text || '');
-      });
-      document.getElementById('batchCopyFirstFailSummaryBtn')?.addEventListener('click', async () => {
-        const item = filteredFailingItems[0] || filteredCriticalItems[0];
-        if (!item) return;
-        updateBatchProgress(item.review.review_id, { lastAction: 'copied first visible failing summary' });
-        await copyTextToClipboard(buildExportSummaryText(item.review), 'First visible failing handoff summary copied.');
-        renderBatchReviewResults(currentBatchReview);
-      });
-      document.getElementById('batchExportNextPendingBtn')?.addEventListener('click', async () => {
-        const item = filteredPendingItems[0];
-        if (!item) return;
-        const button = document.getElementById('batchExportNextPendingBtn');
-        const originalText = button.textContent;
-        button.disabled = true;
-        button.textContent = 'Exporting...';
-        try {
-          await exportBatchReviewItemToITSM(item, null, { renderPanel: currentReview?.review_id === item.review.review_id, successMessage: 'Next visible pending review exported to the current ITSM target.' });
-        } catch (err) {
-          alert(err.message);
-        } finally {
-          button.disabled = false;
-          button.textContent = originalText;
-        }
-      });
-      document.getElementById('batchDuplicateNextPendingBtn')?.addEventListener('click', async () => {
-        const item = filteredPendingItems[0];
-        const latestReusable = findLatestSuccessfulExportEntry(batchReviewIds);
-        if (!item || !latestReusable?.reusablePrefs) return;
-        const button = document.getElementById('batchDuplicateNextPendingBtn');
-        const originalText = button.textContent;
-        button.disabled = true;
-        button.textContent = 'Duplicating...';
-        try {
-          await exportBatchReviewItemToITSM(item, null, {
-            renderPanel: currentReview?.review_id === item.review.review_id,
-            successMessage: `Duplicated ${latestReusable.target} handoff onto the next visible pending review.`,
-            exportPrefsOverride: latestReusable.reusablePrefs,
-          });
-        } catch (err) {
-          alert(err.message);
-        } finally {
-          button.disabled = false;
-          button.textContent = originalText;
-        }
-      });
-      document.getElementById('batchRetryFirstFailedExportBtn')?.addEventListener('click', async () => {
-        const item = filteredFailedExportItems[0];
-        if (!item) return;
-        const button = document.getElementById('batchRetryFirstFailedExportBtn');
-        const originalText = button.textContent;
-        button.disabled = true;
-        button.textContent = 'Retrying...';
-        try {
-          await exportBatchReviewItemToITSM(item, null, { renderPanel: currentReview?.review_id === item.review.review_id, successMessage: 'Retried the first visible failed export with the current target details.' });
-        } catch (err) {
-          alert(err.message);
-        } finally {
-          button.disabled = false;
-          button.textContent = originalText;
-        }
-      });
-      document.getElementById('batchCopyFirstFallbackBtn')?.addEventListener('click', async () => {
-        const item = filteredFailedExportItems[0] || filteredFailingItems[0] || filteredCriticalItems[0];
-        if (!item) return;
-        const latestExport = getReviewExportHistory(item.review.review_id)[0] || null;
-        updateBatchProgress(item.review.review_id, { lastAction: 'copied first visible manual fallback package' });
-        await copyTextToClipboard(buildManualFallbackText(item.review, latestExport), 'First visible manual fallback package copied.');
-        renderBatchReviewResults(currentBatchReview);
-      });
-      document.getElementById('batchDownloadFirstFallbackBtn')?.addEventListener('click', () => {
-        const item = filteredFailedExportItems[0] || filteredFailingItems[0] || filteredCriticalItems[0];
-        if (!item) return;
-        const latestExport = getReviewExportHistory(item.review.review_id)[0] || null;
-        updateBatchProgress(item.review.review_id, { lastAction: 'downloaded first visible fallback bundle' });
-        downloadManualFallbackBundle(item.review, latestExport);
-        renderBatchReviewResults(currentBatchReview);
-      });
     }
 
     async function runBatchReview() {
@@ -3266,8 +3733,16 @@
 
     function getMultiConfigPayload() {
       return [
-        { config_text: document.getElementById('multiConfigA').value, vendor: document.getElementById('vendor').value || null },
-        { config_text: document.getElementById('multiConfigB').value, vendor: document.getElementById('vendor').value || null },
+        {
+          config_text: document.getElementById('multiConfigA').value,
+          vendor: document.getElementById('vendor').value || null,
+          hostname: document.getElementById('multiHostnameA').value.trim() || null,
+        },
+        {
+          config_text: document.getElementById('multiConfigB').value,
+          vendor: document.getElementById('vendor').value || null,
+          hostname: document.getElementById('multiHostnameB').value.trim() || null,
+        },
       ].filter(item => item.config_text.trim());
     }
 
@@ -3292,8 +3767,10 @@
           ${f.config_context ? `<pre>${escapeHtml(f.config_context)}</pre>` : ''}
         </div>
       `).join('');
+      const deviceLabels = getMultiConfigPayload().map((item, index) => item.hostname || `device-${index + 1}`);
       target.innerHTML = `
         <div><strong>Cross-config findings:</strong> ${data.summary?.total || 0} total · ${data.summary?.critical || 0} critical · ${data.summary?.warning || 0} warning</div>
+        <p class="history-meta"><strong>Devices in scope:</strong> ${escapeHtml(deviceLabels.join(' · '))}</p>
         ${links ? `<p><strong>Inferred links</strong></p><ul>${links}</ul>` : '<div class="muted" style="margin-top:10px;">No inferred links yet.</div>'}
         <div style="margin-top:12px;">${findings || '<div class="muted">No cross-config mismatches found.</div>'}</div>
       `;
@@ -3356,6 +3833,7 @@
           running_config: document.getElementById('runningConfig').value,
           startup_config: document.getElementById('startupConfig').value,
           vendor: document.getElementById('vendor').value || null,
+          hostname: document.getElementById('compareHostname').value.trim() || null,
         }),
       });
 
@@ -3363,7 +3841,8 @@
       const data = await res.json();
       const target = document.getElementById('compareResults');
       target.innerHTML = `
-        <div><strong>Lost on reload findings:</strong> ${(data.lost_on_reload || []).length}</div>
+        <div><strong>Device:</strong> ${escapeHtml(data.hostname || 'Unknown device')} · <strong>Platform:</strong> ${escapeHtml(data.platform_detected || 'unknown')}</div>
+        <div style="margin-top:8px;"><strong>Lost on reload findings:</strong> ${(data.lost_on_reload || []).length}</div>
         ${(data.lost_on_reload || []).map(f => `
           <div class="finding critical">
             <h4>${escapeHtml(f.title)}</h4>
@@ -3488,11 +3967,46 @@
     document.getElementById('exportPdfBtn').addEventListener('click', async () => { try { await exportCurrentPdf(); } catch (err) { alert(err.message); } });
     document.getElementById('severityFilter').addEventListener('change', () => {
       saveSessionValue(SESSION_STORAGE_KEYS.severityFilter, document.getElementById('severityFilter').value);
-      if (currentReview) renderFindings(currentReview.findings);
+      if (currentReview) {
+        renderStats(currentReview);
+        renderFindings(currentReview.findings);
+        renderWorklist(currentReview);
+        renderBatchWorkspaceNavigator();
+      }
+      if (currentBatchReview) renderBatchReviewResults(currentBatchReview);
+    });
+    document.getElementById('themeMode').addEventListener('change', (event) => {
+      const preference = event.target.value || 'auto';
+      if (ThemeUi.persistThemePreference) ThemeUi.persistThemePreference(localStorage, preference);
+      else savePersistentValue(LOCAL_STORAGE_KEYS.themePreference, preference);
+      if (ThemeUi.applyThemePreference) ThemeUi.applyThemePreference(document, preference);
+    });
+    window.matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener?.('change', (event) => {
+      const preference = ThemeUi.getStoredThemePreference
+        ? ThemeUi.getStoredThemePreference(localStorage)
+        : loadPersistentValue(LOCAL_STORAGE_KEYS.themePreference, 'auto');
+      if (preference === 'auto' && ThemeUi.applyThemePreference) {
+        ThemeUi.applyThemePreference(document, 'auto', { prefersDark: Boolean(event.matches) });
+      }
+    });
+    document.getElementById('quickPass').addEventListener('change', () => {
+      applyQuickPassUiMode(currentReview);
+      if (currentReview) {
+        renderStats(currentReview);
+        renderQuickPassPanel(currentReview);
+        renderFindings(currentReview.findings);
+        renderBatchWorkspaceNavigator();
+      }
+      if (currentBatchReview) renderBatchReviewResults(currentBatchReview);
     });
     document.getElementById('clearBtn').addEventListener('click', () => {
       document.getElementById('configText').value = '';
+      document.getElementById('hostnameOverride').value = '';
+      document.getElementById('compareHostname').value = '';
+      document.getElementById('multiHostnameA').value = '';
+      document.getElementById('multiHostnameB').value = '';
       clearSingleConfigFileState();
+      resetNavigatorSearchState();
       document.getElementById('findingsList').innerHTML = '<div class="muted">Run an analysis to see findings.</div>';
       document.getElementById('summaryState').textContent = 'No review yet.';
       document.getElementById('stats').style.display = 'none';
@@ -3513,6 +4027,7 @@
       currentReview = null;
       currentBatchReview = null;
       currentWorklistState = {};
+      applyQuickPassUiMode(null);
     });
     loadStarterTemplates();
     restoreSessionPreferences();
@@ -3544,6 +4059,9 @@ line vty 0 4
       document.getElementById('configText').value = sample;
       document.getElementById('runningConfig').value = sample + '\ninterface Loopback0\n ip address 1.1.1.1 255.255.255.255';
       document.getElementById('startupConfig').value = sample;
+      document.getElementById('compareHostname').value = 'BRANCH-R1';
+      document.getElementById('multiHostnameA').value = 'EDGE-A';
+      document.getElementById('multiHostnameB').value = 'EDGE-B';
       document.getElementById('multiConfigA').value = `hostname EDGE-A\ninterface GigabitEthernet0/0\n description TO-EDGE-B\n ip address 10.0.0.1 255.255.255.252\n mtu 1500\n!\nrouter ospf 1\n network 10.0.0.0 0.0.0.3 area 0\n!\nrouter bgp 65001\n neighbor 10.0.0.2 remote-as 65002\n!`;
       document.getElementById('multiConfigB').value = `hostname EDGE-B\ninterface GigabitEthernet0/0\n description TO-EDGE-A\n ip address 10.0.0.2 255.255.255.252\n mtu 9216\n!\nrouter ospf 1\n network 10.0.0.0 0.0.0.3 area 1\n!\nrouter bgp 65002\n neighbor 192.0.2.1 remote-as 65001\n!`;
     });

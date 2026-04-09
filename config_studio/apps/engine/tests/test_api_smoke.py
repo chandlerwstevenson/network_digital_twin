@@ -57,6 +57,206 @@ line vty 0 4
     assert "configure terminal" in body["report"]["body"]["ordered_change_script"]["apply_script"]
 
 
+def test_analyze_preserves_manual_hostname_override_when_detection_fails():
+    response = client.post(
+        "/api/analyze",
+        headers=HEADERS,
+        json={
+            "vendor": "cisco_ios",
+            "hostname": "BRANCH-SW1-PRECHECK",
+            "config_text": """interface GigabitEthernet0/0
+ description uplink to dist
+ ip address 10.0.0.1 255.255.255.252
+!
+ip http server
+line vty 0 4
+ transport input ssh
+!""",
+            "quick_pass": False,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["vendor"]["hostname"] == "BRANCH-SW1-PRECHECK"
+    assert body["report"]["header"]["hostname"] == "BRANCH-SW1-PRECHECK"
+
+
+def test_analyze_junos_surfaces_missing_aaa_http_and_public_management_exposure():
+    response = client.post(
+        "/api/analyze",
+        headers=HEADERS,
+        json={
+            "vendor": "junos",
+            "config_text": """set system host-name edge-junos-1
+set system services ssh
+set system services web-management http
+set interfaces ge-0/0/0 unit 0 family inet address 198.51.100.10/24
+set snmp community public authorization read-only
+""",
+            "quick_pass": False,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    titles = [finding["title"] for finding in body["findings"]]
+    assert "Default SNMP community string in JunOS" in titles
+    assert "JunOS HTTP management enabled without HTTPS" in titles
+    assert "No TACACS+ or RADIUS configuration detected in JunOS config" in titles
+    assert "Management plane may be exposed on ge-0/0/0" in titles
+
+    findings_by_title = {finding["title"]: finding for finding in body["findings"]}
+    assert findings_by_title["JunOS HTTP management enabled without HTTPS"]["line_start"] == 3
+    assert findings_by_title["No TACACS+ or RADIUS configuration detected in JunOS config"]["line_start"] == 1
+
+
+def test_analyze_junos_does_not_flag_missing_aaa_or_http_when_tacacs_and_https_are_present():
+    response = client.post(
+        "/api/analyze",
+        headers=HEADERS,
+        json={
+            "vendor": "junos",
+            "config_text": """set system host-name edge-junos-2
+set system services ssh
+set system services web-management https system-generated-certificate
+set system tacplus-server 10.0.0.5 secret \"$9$abc\"
+set system authentication-order [ tacplus password ]
+set interfaces ge-0/0/0 unit 0 family inet address 10.0.0.10/24
+""",
+            "quick_pass": False,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    titles = [finding["title"] for finding in body["findings"]]
+    assert "JunOS HTTP management enabled without HTTPS" not in titles
+    assert "No TACACS+ or RADIUS configuration detected in JunOS config" not in titles
+    assert not any(title.startswith("Management plane may be exposed on") for title in titles)
+
+
+def test_analyze_junos_hierarchical_config_surfaces_http_missing_aaa_and_public_management_exposure():
+    response = client.post(
+        "/api/analyze",
+        headers=HEADERS,
+        json={
+            "vendor": "junos",
+            "config_text": """system {
+  host-name edge-junos-hier;
+  services {
+    ssh;
+    web-management {
+      http;
+    }
+  }
+}
+interfaces {
+  ge-0/0/0 {
+    unit 0 {
+      family inet {
+        address 198.51.100.10/24;
+      }
+    }
+  }
+}
+""",
+            "quick_pass": False,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    titles = [finding["title"] for finding in body["findings"]]
+    assert "JunOS HTTP management enabled without HTTPS" in titles
+    assert "No TACACS+ or RADIUS configuration detected in JunOS config" in titles
+    assert "Management plane may be exposed on ge-0/0/0" in titles
+
+    findings_by_title = {finding["title"]: finding for finding in body["findings"]}
+    assert findings_by_title["JunOS HTTP management enabled without HTTPS"]["line_start"] == 6
+    assert findings_by_title["No TACACS+ or RADIUS configuration detected in JunOS config"]["line_start"] == 1
+
+
+def test_analyze_cisco_global_security_findings_anchor_to_relevant_lines():
+    response = client.post(
+        "/api/analyze",
+        headers=HEADERS,
+        json={
+            "config_text": """hostname edge-cisco-1
+username netops privilege 15 secret 9 $9$abc
+interface GigabitEthernet0/0
+ ip address 203.0.113.10 255.255.255.0
+!
+ip http server
+line vty 0 4
+ transport input ssh
+!""",
+            "quick_pass": False,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    findings_by_title = {finding["title"]: finding for finding in body["findings"]}
+    assert findings_by_title["HTTP server enabled without HTTPS"]["line_start"] == 6
+    assert findings_by_title["No AAA configuration detected"]["line_start"] == 2
+    assert findings_by_title["No Control Plane Policing (CoPP) detected"]["line_start"] == 3
+
+
+def test_analyze_flags_true_acl_shadowing_for_broad_any_any_rule():
+    response = client.post(
+        "/api/analyze",
+        headers=HEADERS,
+        json={
+            "config_text": """hostname edge-acl-true-positive
+ip access-list extended INTERNET-IN
+ deny ip any any
+ permit tcp host 10.0.0.10 any eq 443
+!""",
+            "quick_pass": False,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    findings_by_title = {finding["title"]: finding for finding in body["findings"]}
+    assert "Potential ACL shadowing in ip access-list extended INTERNET-IN" in findings_by_title
+    assert findings_by_title["Potential ACL shadowing in ip access-list extended INTERNET-IN"]["line_start"] == 3
+
+
+def test_analyze_does_not_false_positive_acl_shadowing_for_service_specific_deny_before_general_permit():
+    response = client.post(
+        "/api/analyze",
+        headers=HEADERS,
+        json={
+            "config_text": """hostname edge-acl-false-positive
+ip access-list extended INTERNET-IN
+ deny tcp any any eq 23
+ permit ip any any
+!""",
+            "quick_pass": False,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    titles = [finding["title"] for finding in body["findings"]]
+    assert "Potential ACL shadowing in ip access-list extended INTERNET-IN" not in titles
+
+
+def test_analyze_flags_acl_shadowing_for_broad_any_any_rule_with_log_modifier():
+    response = client.post(
+        "/api/analyze",
+        headers=HEADERS,
+        json={
+            "config_text": """hostname edge-acl-log-shadow
+ip access-list extended INTERNET-IN
+ deny ip any any log
+ permit tcp host 10.0.0.10 any eq 443
+!""",
+            "quick_pass": False,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    findings_by_title = {finding["title"]: finding for finding in body["findings"]}
+    assert "Potential ACL shadowing in ip access-list extended INTERNET-IN" in findings_by_title
+    assert findings_by_title["Potential ACL shadowing in ip access-list extended INTERNET-IN"]["line_start"] == 3
+
+
 def test_report_render_requires_api_key():
     response = client.post(
         "/api/report/render",
@@ -121,7 +321,38 @@ def test_compare_detects_lost_on_reload():
     )
     assert response.status_code == 200
     body = response.json()
+    assert body["hostname"] == "r1"
+    assert body["platform_detected"] in ["cisco_ios", "cisco_iosxe", "unknown"]
     assert len(body["lost_on_reload"]) >= 1
+
+
+def test_compare_preserves_manual_hostname_override_when_configs_are_scrubbed():
+    response = client.post(
+        "/api/compare",
+        headers=HEADERS,
+        json={
+            "vendor": "cisco_ios",
+            "hostname": "BRANCH-RTR-SCRUBBED",
+            "running_config": "interface Loopback0\n ip address 1.1.1.1 255.255.255.255",
+            "startup_config": "",
+        },
+    )
+    assert response.status_code == 422
+
+    response = client.post(
+        "/api/compare",
+        headers=HEADERS,
+        json={
+            "vendor": "cisco_ios",
+            "hostname": "BRANCH-RTR-SCRUBBED",
+            "running_config": "interface Loopback0\n ip address 1.1.1.1 255.255.255.255",
+            "startup_config": "interface Loopback0",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["hostname"] == "BRANCH-RTR-SCRUBBED"
+    assert body["platform_detected"] == "cisco_ios"
 
 
 def test_correlate_requires_api_key():
@@ -177,6 +408,54 @@ router bgp 65002
     assert "Cross-device BGP peer mismatch" in titles
     assert body["summary"]["total"] >= 3
     assert len(body["inferred_links"]) >= 1
+
+
+def test_correlate_preserves_manual_hostname_overrides_when_configs_are_scrubbed():
+    response = client.post(
+        "/api/correlate",
+        headers=HEADERS,
+        json={
+            "configs": [
+                {
+                    "vendor": "cisco_ios",
+                    "hostname": "EDGE-A-SCRUBBED",
+                    "config_text": """interface GigabitEthernet0/0
+ description TO-EDGE-B-SCRUBBED
+ ip address 10.0.0.1 255.255.255.252
+ mtu 1500
+!
+router ospf 1
+ network 10.0.0.0 0.0.0.3 area 0
+!
+router bgp 65001
+ neighbor 10.0.0.2 remote-as 65002
+!"""
+                },
+                {
+                    "vendor": "cisco_ios",
+                    "hostname": "EDGE-B-SCRUBBED",
+                    "config_text": """interface GigabitEthernet0/0
+ description TO-EDGE-A-SCRUBBED
+ ip address 10.0.0.2 255.255.255.252
+ mtu 9216
+!
+router ospf 1
+ network 10.0.0.0 0.0.0.3 area 1
+!
+router bgp 65002
+ neighbor 192.0.2.1 remote-as 65001
+!"""
+                },
+            ]
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert any("EDGE-A-SCRUBBED" in link["label"] for link in body["inferred_links"])
+    assert any(
+        "EDGE-A-SCRUBBED" in finding["description"] or "EDGE-B-SCRUBBED" in finding["description"]
+        for finding in body["findings"]
+    )
 
 
 def test_batch_review_returns_archive_intake_summary_for_skipped_entries():

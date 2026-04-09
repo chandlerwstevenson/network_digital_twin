@@ -847,6 +847,9 @@ def _run_analysis(req: AnalyzeRequest) -> AnalyzeResponse:
     else:
         vendor_info = detect_vendor(req.config_text)
 
+    if req.hostname:
+        vendor_info.hostname = req.hostname
+
     # 2. Snippet detection
     if req.snippet_mode is not None:
         snippet_info = SnippetInfo(is_snippet=req.snippet_mode, detected_section=req.context_hint)
@@ -966,6 +969,16 @@ async def render_report(req: AnalyzeRequest, format: str = "html", _=Depends(_ve
     return HTMLResponse(content=html)
 
 
+def _resolve_hostname_override(item: dict | None, fallback: str | None = None) -> str | None:
+    if not item:
+        return fallback
+    hostname = item.get("hostname") if isinstance(item, dict) else None
+    if hostname is None:
+        return fallback
+    hostname = str(hostname).strip()
+    return hostname[:255] if hostname else fallback
+
+
 @router.post("/batch-review", response_model=BatchReviewResponse)
 async def batch_review_configs(req: BatchReviewRequest, _=Depends(_verify_key)):
     """Review a ZIP of configs in one session and optionally run cross-config correlation."""
@@ -1063,7 +1076,10 @@ async def compare_configs(req: CompareRequest, _=Depends(_verify_key)):
                 compliance_tags=["operational-risk"],
             ))
 
+    hostname = req.hostname or vendor_info.hostname
     return CompareResponse(
+        hostname=hostname,
+        platform_detected=f"{vendor_info.vendor.value}{' ' + vendor_info.os_version if vendor_info.os_version else ''}",
         lost_on_reload=lost_findings,
         added_since_startup=[{"line": l} for l in added_since if l.strip() and not l.strip().startswith("!")],
         removed_since_startup=[{"line": l} for l in lost_on_reload if l.strip() and not l.strip().startswith("!")],
@@ -1240,7 +1256,7 @@ async def query_multi_config(req: MultiConfigQueryRequest, _=Depends(_verify_key
         normalized.append(
             {
                 "config_text": item.config_text,
-                "hostname": item.hostname or vendor_info.hostname,
+                "hostname": _resolve_hostname_override(item.model_dump(), vendor_info.hostname),
                 "vendor_info": vendor_info,
             }
         )

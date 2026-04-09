@@ -60,8 +60,21 @@ Next target:
 - queue-level batch quick actions now respect the visible filtered/search slice instead of acting on hidden reviews elsewhere in the queue, which removes a real change-window footgun when an engineer narrows to a subset and expects “next pending” / “retry first failed” to stay inside that slice
 - the analysis workspace now includes a batch queue navigator when a review is opened from a ZIP batch, so the engineer can move previous/next within the current visible slice and use a one-click `mark done + open next pending` flow without bouncing back down to the batch panel after every device
 - single-file upload intake now surfaces filename/size/line-count status, supports more real export suffixes (`.config`, `.cnf`, `.bak`), and warns before analysis when the selected file is empty, oversized (>2 MB), binary-looking, or otherwise suspicious instead of silently stuffing it into the workspace
+- the config navigator now supports direct in-config text search plus jump-to-line from the workspace, which closes a real operator gap during change windows where engineers need to verify arbitrary interfaces / ACLs / route-maps that are not already linked from findings
+- the findings severity filter is now a real session-scoped operator threshold instead of a cosmetic list toggle: the main workspace stats, findings panel, and batch triage cards all reflect the current threshold so engineers can stay in critical-only or warning-plus-critical mode during a live change window without mentally subtracting hidden noise
+- the batch triage queue now also adopts the active severity threshold for queue ranking, card previews, and attention shortcuts, so `critical only` or `warning + critical` sessions no longer open/preview the wrong devices first based on lower-severity noise hidden elsewhere in the review
 - return to backend validation depth for ServiceNow partial-failure coverage and export/reporting depth
 - after that, consider whether the batch queue should expose more pre-review ZIP linting before upload (for example, warn locally on obviously empty sidecar-heavy archives)
+- batch triage queue default `Needs attention` semantics are now tightened to mean actionable under the current severity threshold (or blocked by export failure) instead of pulling in every merely-not-done review; `Pending handoff` remains the full completion sweep
+- behavior-level coverage now exists for the two newest threshold-aware/session-state operator paths that were previously only build-validated: `apps/web/ui_helpers.js` centralizes queue-filter/search + config-search matching logic, and `apps/web/ui_helpers.test.cjs` exercises `Needs attention` actionability, export-issue filtering, and config-navigator search matching with `node --test`
+- batch triage queue now exposes an explicit `Ready to hand off` slice plus matching open/export quick actions, so operators can isolate clean not-done reviews with no visible threshold findings and no export problem instead of mixing them into `Pending handoff`
+- browser-level DOM coverage now exists for that queue-control path instead of only helper/build validation: `apps/web/batch_queue_ui.js` centralizes the batch queue filter/quick-action toolbar markup + event wiring used by `index.html`, and `apps/web/batch_queue_ui.test.cjs` verifies the rendered `Ready to hand off` control state plus click wiring for the handoff-ready quick actions under `node --test`
+- quick-pass now behaves like an actual change-window quick pass instead of a cosmetic checkbox: when enabled after a review, the web UI collapses to a compact single-screen operator view (hostname, platform, pass/fail, critical-only list) and hides compliance/export/query/config-navigation/template detail until the engineer turns quick-pass back off
+- DOM-level coverage now also exists for that quick-pass workspace behavior: `apps/web/quick_pass_ui.js` centralizes the rendered quick-pass visibility toggles/toolbar note used by `index.html`, and `apps/web/quick_pass_ui.test.cjs` verifies that quick-pass really hides the nonessential workspace sections/panels and restores them when the mode is off or no review is loaded
+- the web app now exposes an explicit `Display theme` control with persistent `Auto / Dark / Light` modes instead of forcing a single hard-coded palette; this closes the remaining practical REQ-3.10.3 gap for engineers moving between bright daytime review sessions and overnight change windows, and `apps/web/theme_ui.js` + `apps/web/theme_ui.test.cjs` now cover theme resolution/persistence behavior
+- if more web UX work is needed later, the next operator-focused refinement is to add one more DOM-level test for a rendered batch card action (for example, queue-level `Export first visible handoff-ready review`) or move up to a real browser runner when the workspace can justify the extra dependency weight
+- single-review workflow now supports a manual hostname override end-to-end, so snippet-only or scrubbed exports no longer have to fall back to `Unknown device` in the report header, query history context, or ITSM export payloads when auto-detection cannot recover a hostname
+- next highest-leverage operator gap after that hostname fix is a similar manual-identity path for running-vs-startup compare and multi-config correlation inputs, where scrubbed configs can still degrade to generic device labels and make side-by-side review harder than it should be
 
 ### 3. Findings quality
 Requirements:
@@ -69,10 +82,18 @@ Requirements:
 - REQ-3.3.4 security checks
 - REQ-3.3.5 finding output format
 
+Status update (2026-04-08):
+- strengthened JunOS security coverage in `apps/engine/app/linters/security.py` instead of adding more UI surface area: the engine now flags JunOS HTTP web management without HTTPS, missing centralized AAA (no TACACS+/RADIUS), and likely management-plane exposure when management services are enabled alongside public interface addresses
+- tightened that pass so the new JunOS checks also work on hierarchical/curly-brace configs instead of only `set` syntax, which keeps it aligned with REQ-3.3.1’s launch-format expectation for JunOS
+- improved JunOS finding usefulness with more concrete remediation/rollback text and added smoke coverage in `apps/engine/tests/test_api_smoke.py`; engine smoke suite now passes at `44 passed`
+- tightened REQ-3.3.5 line attribution for broad security findings so they anchor to relevant config lines instead of defaulting to line 1 too often: Cisco HTTP-without-HTTPS / missing AAA / missing CoPP findings now anchor to the HTTP line or nearby auth/interface context, and JunOS HTTP-without-HTTPS now anchors to the actual web-management HTTP line while missing AAA anchors to the first meaningful system/auth context line. Added smoke assertions for these anchors; engine smoke suite now passes at `45 passed`
+- reduced one of the noisiest REQ-3.3.3 false-positive sources in `apps/engine/app/linters/semantic.py`: ACL shadowing detection no longer flags any rule that merely contains `any`, and now only warns when an earlier ACL entry actually broad-matches later entries (for example, `deny ip any any` before later specific permits). Added smoke coverage for both the real shadowing case and the previously noisy `deny tcp any any eq 23` before `permit ip any any` case; engine smoke suite now passes at `47 passed`
+- tightened that ACL-shadowing refinement so it still catches broad Cisco rules with non-narrowing logging modifiers like `deny ip any any log`, which are still operationally shadowing later ACL entries even though they are not bare `any any`. Added smoke coverage for the logged broad-rule case; engine smoke suite now passes at `48 passed`
+
 Target:
-- improve line attribution
-- reduce false positives
-- strengthen JunOS coverage
+- keep improving line attribution for remaining broad/global findings that still anchor to line 1 too often
+- reduce false positives in other semantic checks beyond ACL shadowing / broad-match heuristics, while preserving true positives for broad Cisco rules with harmless trailing modifiers
+- continue strengthening JunOS coverage beyond security basics
 - ensure findings consistently include useful remediation/rollback/context
 
 ### 4. Persistence
